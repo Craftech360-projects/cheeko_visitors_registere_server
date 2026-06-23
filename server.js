@@ -105,11 +105,13 @@ app.post("/api/leads/:id/enrich", async (req, res) => {
   const lead = db.prepare("SELECT * FROM leads WHERE id=?").get(req.params.id);
   if (!lead) return res.status(404).json({ error: "not_found" });
 
-  const images = []; // base64 jpegs of the card
+  const images = []; // {data, mime} for each card photo
   for (const p of [lead.front_photo, lead.back_photo]) {
     if (!p) continue;
     try {
-      images.push(fs.readFileSync(path.join(ROOT, p)).toString("base64"));
+      const buf = fs.readFileSync(path.join(ROOT, p));
+      const mime = buf[0] === 0x89 && buf[1] === 0x50 ? "image/png" : "image/jpeg"; // PNG magic vs JPEG
+      images.push({ data: buf.toString("base64"), mime });
     } catch { /* missing file: skip */ }
   }
   if (!images.length) return res.status(400).json({ error: "no_photo" });
@@ -121,7 +123,7 @@ app.post("/api/leads/:id/enrich", async (req, res) => {
   const model = process.env.OCR_MODEL || "gemini-2.5-flash";
 
   try {
-    const parts = images.map((d) => ({ inline_data: { mime_type: "image/jpeg", data: d } }));
+    const parts = images.map((im) => ({ inline_data: { mime_type: im.mime, data: im.data } }));
     parts.push({ text: prompt });
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
