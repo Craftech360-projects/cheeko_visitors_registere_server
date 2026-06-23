@@ -52,6 +52,12 @@ function savePhoto(dataUrl, id, side) {
 }
 
 const app = express();
+// Request log: method, path, status, duration — so the console shows activity.
+app.use((req, res, next) => {
+  const t = Date.now();
+  res.on("finish", () => console.log(`${req.method} ${req.url} → ${res.statusCode} (${Date.now() - t}ms)`));
+  next();
+});
 app.use(express.json({ limit: "8mb" })); // downscaled photos arrive as base64 JSON
 app.use(express.static(path.join(ROOT, "public")));
 app.use("/photos", express.static(PHOTO_DIR));
@@ -147,7 +153,11 @@ app.post("/api/leads/:id/enrich", async (req, res) => {
         }),
       }
     );
-    if (!r.ok) return res.status(502).json({ error: "ocr_failed", status: r.status });
+    if (!r.ok) {
+      const body = await r.text().catch(() => "");
+      console.error(`[enrich #${lead.id}] Gemini ${r.status}: ${body.slice(0, 300)}`);
+      return res.status(502).json({ error: "ocr_failed", status: r.status });
+    }
     const data = await r.json();
     const c = data.candidates && data.candidates[0];
     const text = c && c.content && c.content.parts && c.content.parts[0] && c.content.parts[0].text;
@@ -157,8 +167,10 @@ app.post("/api/leads/:id/enrich", async (req, res) => {
       const set = filled.map((f) => `${f}=@${f}`).join(", ");
       db.prepare(`UPDATE leads SET ${set} WHERE id=@id`).run({ ...updates, id: lead.id });
     }
+    console.log(`[enrich #${lead.id}] filled: ${filled.join(", ") || "(none)"}`);
     res.json({ filled, updates });
   } catch (e) {
+    console.error(`[enrich #${lead.id}] error:`, e);
     res.status(502).json({ error: String(e) });
   }
 });
@@ -231,4 +243,5 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`  Capture (phones): ${url}/`);
   console.log(`  Stall QR code:    ${url}/qr`);
   console.log(`  Dashboard:        ${url}/dashboard`);
+  console.log(`  OCR (Enrich):     ${process.env.GOOGLE_API_KEY ? "enabled (Gemini)" : "disabled — set GOOGLE_API_KEY in .env"}`);
 });
