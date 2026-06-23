@@ -31,8 +31,31 @@ On boot it prints the LAN URLs:
 - `visitors.db` (SQLite) + `photos/` hold everything. Both gitignored.
 - **Primary backup:** server auto-copies the DB to `backups/` hourly; drag
   `visitors.db` + `photos/` to a USB at end of day.
-- **Cloud backup (optional, internet only):** set `SUPABASE_URL`,
-  `SUPABASE_KEY`, `SUPABASE_BUCKET` env vars, then `POST /api/backup/cloud`.
+- **Cloud sync (optional, internet only):** see "Supabase sync" below.
+
+## Supabase sync (optional, internet only)
+
+Pushes leads as **rows** into a Supabase `leads` table and their card photos
+into a Storage bucket (image URLs saved on each row). One-directional
+(PC → cloud) and idempotent: re-syncing a lead **updates** its row (keyed on
+`id`), never duplicates.
+
+Setup:
+1. Run [`supabase-schema.sql`](supabase-schema.sql) in Supabase SQL Editor.
+2. Create a Storage bucket named `cards` (make it Public for openable URLs).
+3. Add to `.env`:
+   ```
+   SUPABASE_URL=https://xxxx.supabase.co
+   SUPABASE_SERVICE_KEY=...        # service_role key (Project Settings → API)
+   SUPABASE_BUCKET=cards           # optional, defaults to "cards"
+   ```
+
+When it runs:
+- **After each ✨ Enrich** — that lead is auto-pushed (you're already online).
+- **☁️ Sync all to Supabase** button — pushes every lead; catch-all for leads
+  that were never enriched (e.g. no photo). Safe to click repeatedly.
+
+Without the keys, sync is disabled and the button reports "not configured".
 
 ## Test
 

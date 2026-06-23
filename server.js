@@ -7,6 +7,7 @@ const { normalizeForWa } = require("./lib/phone");
 const { lanIp } = require("./lib/net");
 const { toCsv } = require("./lib/csv");
 const { mergeEnrichment, parseOcrJson } = require("./lib/enrich");
+const { leadToRow } = require("./lib/supabase");
 
 const PORT = process.env.PORT || 8080;
 const ROOT = __dirname;
@@ -49,6 +50,46 @@ function savePhoto(dataUrl, id, side) {
   const file = `${id}-${side}.jpg`;
   fs.writeFileSync(path.join(PHOTO_DIR, file), Buffer.from(b64, "base64"));
   return "photos/" + file;
+}
+
+// --- Supabase sync (online-only, optional). Push leads -> table, photos -> bucket. ---
+function supaConfig() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return null;
+  return { url, key, bucket: process.env.SUPABASE_BUCKET || "cards" };
+}
+
+// Upload one photo to the bucket (upsert), return its public URL. null if no file.
+async function uploadPhoto(supa, relPath) {
+  if (!relPath) return null;
+  let buf;
+  try { buf = fs.readFileSync(path.join(ROOT, relPath)); } catch { return null; }
+  const name = path.basename(relPath); // e.g. "3-front.jpg"
+  const mime = buf[0] === 0x89 && buf[1] === 0x50 ? "image/png" : "image/jpeg";
+  const r = await fetch(`${supa.url}/storage/v1/object/${supa.bucket}/${name}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${supa.key}`, apikey: supa.key, "Content-Type": mime, "x-upsert": "true" },
+    body: buf,
+  });
+  if (!r.ok) throw new Error(`storage ${r.status}: ${(await r.text().catch(() => "")).slice(0, 200)}`);
+  return `${supa.url}/storage/v1/object/public/${supa.bucket}/${name}`;
+}
+
+// Upsert a single lead (photos + row) into Supabase. Keyed on id -> updates, never duplicates.
+async function syncLead(supa, lead) {
+  const frontUrl = await uploadPhoto(supa, lead.front_photo);
+  const backUrl = await uploadPhoto(supa, lead.back_photo);
+  const row = leadToRow(lead, { frontUrl, backUrl });
+  const r = await fetch(`${supa.url}/rest/v1/leads?on_conflict=id`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${supa.key}`, apikey: supa.key,
+      "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal",
+    },
+    body: JSON.stringify([row]),
+  });
+  if (!r.ok) throw new Error(`upsert ${r.status}: ${(await r.text().catch(() => "")).slice(0, 200)}`);
 }
 
 const app = express();
@@ -168,6 +209,13 @@ app.post("/api/leads/:id/enrich", async (req, res) => {
       db.prepare(`UPDATE leads SET ${set} WHERE id=@id`).run({ ...updates, id: lead.id });
     }
     console.log(`[enrich #${lead.id}] filled: ${filled.join(", ") || "(none)"}`);
+    // Auto-push this lead to Supabase if configured (best-effort; never fails the enrich).
+    const supa = supaConfig();
+    if (supa) {
+      const fresh = db.prepare("SELECT * FROM leads WHERE id=?").get(lead.id);
+      try { await syncLead(supa, fresh); console.log(`[enrich #${lead.id}] synced to Supabase`); }
+      catch (e) { console.error(`[enrich #${lead.id}] Supabase sync failed:`, e.message); }
+    }
     res.json({ filled, updates });
   } catch (e) {
     console.error(`[enrich #${lead.id}] error:`, e);
@@ -206,24 +254,20 @@ app.get("/qr", async (_req, res) => {
   );
 });
 
-// ponytail: secondary backup only, no-op unless Supabase env is set. Primary
-// safety net is the hourly local copy below + end-of-day USB.
-app.post("/api/backup/cloud", async (req, res) => {
-  const { SUPABASE_URL, SUPABASE_KEY, SUPABASE_BUCKET } = process.env;
-  if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(400).json({ error: "supabase_not_configured" });
-  try {
-    const bucket = SUPABASE_BUCKET || "visitors-backup";
-    const key = `visitors-${new Date().toISOString().replace(/[:.]/g, "-")}.db`;
-    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${key}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/octet-stream" },
-      body: fs.readFileSync(DB_PATH),
-    });
-    if (!r.ok) return res.status(502).json({ error: "upload_failed", status: r.status });
-    res.json({ ok: true, key });
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
+// Sync ALL leads to Supabase (rows + photos). Online-only, idempotent upsert.
+// Catch-all for leads never enriched; enrich already auto-pushes each lead.
+app.post("/api/sync", async (_req, res) => {
+  const supa = supaConfig();
+  if (!supa) return res.status(400).json({ error: "supabase_not_configured" });
+  const leads = db.prepare("SELECT * FROM leads").all();
+  let synced = 0;
+  const errors = [];
+  for (const lead of leads) {
+    try { await syncLead(supa, lead); synced++; }
+    catch (e) { errors.push(`#${lead.id}: ${e.message}`); console.error(`[sync #${lead.id}]`, e.message); }
   }
+  console.log(`[sync] ${synced}/${leads.length} leads synced${errors.length ? ", " + errors.length + " failed" : ""}`);
+  res.json({ synced, total: leads.length, errors });
 });
 
 // Primary backup: hourly timestamped copy of the DB (cheap, always-on, offline).
@@ -244,4 +288,5 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`  Stall QR code:    ${url}/qr`);
   console.log(`  Dashboard:        ${url}/dashboard`);
   console.log(`  OCR (Enrich):     ${process.env.GOOGLE_API_KEY ? "enabled (Gemini)" : "disabled — set GOOGLE_API_KEY in .env"}`);
+  console.log(`  Supabase sync:    ${supaConfig() ? "enabled (bucket: " + supaConfig().bucket + ")" : "disabled — set SUPABASE_URL + SUPABASE_SERVICE_KEY in .env"}`);
 });

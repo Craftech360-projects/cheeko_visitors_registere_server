@@ -25,6 +25,7 @@
     <input id="search" placeholder="Search name / company / phone…">
     <select id="filter"><option value="">All</option><option value="hot">🔴 Hot</option><option value="warm">🟡 Warm</option><option value="cold">🟢 Cold</option></select>
     <a class="btn-primary" style="width:auto;margin-top:0;text-decoration:none" href="/export.csv">⬇ Export CSV</a>
+    <button class="btn-primary" style="width:auto;margin-top:0;background:#0B7A5E" onclick="syncAll(this)">☁️ Sync all to Supabase</button>
   </div>
 
   <details>
@@ -64,6 +65,24 @@ async function enrich(id, btn) {
     }
     await load();
     toast(d.filled && d.filled.length ? "Filled: " + d.filled.join(", ") : "Nothing new found on the card");
+  } finally {
+    btn.textContent = label; btn.disabled = false;
+  }
+}
+
+async function syncAll(btn) {
+  const label = btn.textContent; btn.textContent = "Syncing…"; btn.disabled = true;
+  try {
+    const r = await fetch("/api/sync", { method: "POST" });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      toast(d.error === "supabase_not_configured"
+        ? "Set SUPABASE_URL + SUPABASE_SERVICE_KEY in .env"
+        : "Sync failed: " + (d.error || r.status), false);
+      return;
+    }
+    const failed = d.errors && d.errors.length;
+    toast(`Synced ${d.synced}/${d.total} leads` + (failed ? ` (${failed} failed — see logs)` : ""), !failed);
   } finally {
     btn.textContent = label; btn.disabled = false;
   }
