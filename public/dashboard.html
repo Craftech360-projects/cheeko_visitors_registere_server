@@ -150,6 +150,7 @@ function render(){
               ${l.email ? `<a class="btn be" href="mailto:${esc(l.email)}">✉️ Email</a>` : ""}
               <a class="btn bp" href="tel:+${l.wa_phone}">📞</a>
               ${l.front_photo ? `<button class="btn be" onclick="enrich(${l.id},this)">${l.enriched_at ? "↻ Re-enrich" : "✨ Enrich"}</button>` : ""}
+              <button class="btn bp" onclick="toggleDetail(${l.id})">ⓘ Details</button>
             </div>
           </div>
         </div>
@@ -157,8 +158,29 @@ function render(){
       <td>${l.state ? `<span class="sp">${esc(l.state)}</span><br>` : ""}${l.city ? `<span class="muted">${esc(l.city)}</span>` : (l.state ? "" : "—")}</td>
       <td class="pr">${esc(l.products) || "—"}${l.note ? `<div style="margin-top:3px">📝 ${esc(l.note)}</div>` : ""}</td>
       <td class="pr">${esc(l.phone)}</td>
-    </tr>`;
+    </tr>` + detailRow(l);
   }).join("") || `<tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:24px">No leads yet</td></tr>`;
+}
+
+// Hidden row under each lead showing EVERY field (blanks as "—").
+function detailRow(l) {
+  const F = (label, val) => `<div><div class="dl">${label}</div><div class="dv">${val || "—"}</div></div>`;
+  const site = l.website ? `<a href="${/^https?:\/\//.test(l.website) ? esc(l.website) : "https://" + esc(l.website)}" target="_blank">${esc(l.website)}</a>` : "";
+  return `<tr id="d${l.id}" style="display:none"><td colspan="4" style="background:#fafbff">
+    <div class="detail">
+      ${F("Name", esc(l.name))}${F("Company", esc(l.company))}${F("Priority", esc(l.tag))}
+      ${F("Phone", esc(l.phone))}${F("WhatsApp #", esc(l.wa_phone))}${F("Email", esc(l.email))}
+      ${F("Website", site)}${F("City", esc(l.city))}${F("State / region", esc(l.state))}
+      ${F("Products / interest", esc(l.products))}${F("Note", esc(l.note))}
+      ${F("Enriched", l.enriched_at ? esc(l.enriched_at) : "pending")}${F("Captured", esc(l.created_at))}
+      ${F("Front photo", l.front_photo ? `<a href="/${l.front_photo}" target="_blank">view</a>` : "")}
+      ${F("Back photo", l.back_photo ? `<a href="/${l.back_photo}" target="_blank">view</a>` : "")}
+    </div></td></tr>`;
+}
+
+function toggleDetail(id) {
+  const r = document.getElementById("d" + id);
+  r.style.display = r.style.display === "none" ? "" : "none";
 }
 
 async function saveTpl(){
