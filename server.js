@@ -5,6 +5,7 @@ const Database = require("better-sqlite3");
 const QRCode = require("qrcode");
 const { normalizeForWa } = require("./lib/phone");
 const { lanIp } = require("./lib/net");
+const { toCsv } = require("./lib/csv");
 
 const PORT = process.env.PORT || 8080;
 const ROOT = __dirname;
@@ -93,6 +94,15 @@ app.post("/api/leads", (req, res) => {
 
 app.get("/api/leads", (_req, res) => {
   res.json(db.prepare("SELECT * FROM leads ORDER BY created_at DESC").all());
+});
+
+// Export all leads as a CSV download (open in Excel / Google Sheets).
+app.get("/export.csv", (_req, res) => {
+  const rows = db.prepare("SELECT * FROM leads ORDER BY created_at DESC").all();
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="leads-${stamp}.csv"`);
+  res.send("﻿" + toCsv(rows)); // BOM so Excel reads UTF-8 correctly
 });
 
 app.get("/api/template", (_req, res) => res.json({ template: getTemplate() }));

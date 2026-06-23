@@ -72,10 +72,13 @@ function toast(msg, ok = true) {
   t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1800);
 }
 
+const val = id => document.getElementById(id).value;
+
 async function send(confirm) {
+  // Read by id explicitly — bare `name` would resolve to window.name, not the input.
   const body = {
-    phone: phone.value, name: name.value, company: company.value, city: city.value,
-    products: products.value, note: note.value, tag: tag.value,
+    phone: val("phone"), name: val("name"), company: val("company"), city: val("city"),
+    products: val("products"), note: val("note"), tag: val("tag"),
     frontPhoto: photos.front, backPhoto: photos.back, confirm,
   };
   const r = await fetch("/api/leads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -89,7 +92,7 @@ async function send(confirm) {
   document.getElementById("f").reset();
   document.querySelectorAll('.photobox img').forEach(i => { i.hidden = true; i.src = ""; });
   photos.front = photos.back = null;
-  phone.focus();
+  document.getElementById("phone").focus();
   toast("Lead saved ✓");
 }
 
