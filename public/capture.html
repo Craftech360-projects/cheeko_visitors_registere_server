@@ -2,45 +2,142 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Capture Lead</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>New Lead</title>
 <link rel="stylesheet" href="/style.css">
+<style>
+  body{background:#f4f5f7}
+  .app{max-width:560px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;background:#f4f5f7}
+
+  /* sticky app header */
+  .appbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid #e8eaee;
+    padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;text-align:center}
+  .appbar h1{font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .appbar p{font-size:12px;color:#6b7280;margin-top:2px}
+
+  /* scroll area, leaves room for sticky CTA */
+  .form{flex:1;padding:16px 14px 120px;display:flex;flex-direction:column;gap:16px}
+
+  /* section card */
+  .sec{background:#fff;border:1px solid #e8eaee;border-radius:16px;padding:14px}
+  .sec-t{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+
+  .field{margin-bottom:12px}
+  .field:last-child{margin-bottom:0}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:#4b5563;margin-bottom:6px}
+  .field .req{color:#FA5252}
+  .field input,.field textarea{width:100%;font-size:16px;padding:12px 13px;border:1.5px solid #e2e5ea;
+    border-radius:12px;background:#fff;font-family:inherit;color:#1a1a2e;transition:border-color .15s,box-shadow .15s}
+  .field input:focus,.field textarea:focus{outline:none;border-color:#3B5BDB;box-shadow:0 0 0 4px #3B5BDB22}
+  .field textarea{min-height:64px;resize:vertical}
+  .hint{font-size:11px;color:#9ca3af;margin-top:5px}
+
+  /* photo tiles */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .tile{position:relative;aspect-ratio:1.6/1;border:1.5px dashed #cfd4dc;border-radius:14px;background:#f8f9fb;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+    color:#6b7280;font-size:12.5px;font-weight:600;overflow:hidden;-webkit-tap-highlight-color:transparent;transition:transform .1s}
+  .tile:active{transform:scale(.97)}
+  .tile svg{width:26px;height:26px;stroke:#9aa1ac}
+  .tile input{display:none}
+  .tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}
+
+  /* priority chips */
+  .chips{display:flex;gap:8px}
+  .chip{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 8px;border-radius:12px;
+    border:1.5px solid #e2e5ea;background:#fff;font-size:14px;font-weight:600;color:#4b5563;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;transition:transform .1s,border-color .15s,background .15s}
+  .chip:active{transform:scale(.96)}
+  .chip .dot{width:9px;height:9px;border-radius:50%}
+  .chip[data-val=hot] .dot{background:#FA5252}
+  .chip[data-val=warm] .dot{background:#F59F00}
+  .chip[data-val=cold] .dot{background:#40C057}
+  .chip.on[data-val=hot]{border-color:#FA5252;background:#FFF0F0;color:#C92A2A}
+  .chip.on[data-val=warm]{border-color:#F59F00;background:#FFF8EC;color:#8E4B0A}
+  .chip.on[data-val=cold]{border-color:#40C057;background:#EBFBF0;color:#0B7A5E}
+
+  /* sticky bottom CTA */
+  .cta{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(255,255,255,.92);
+    backdrop-filter:blur(8px);border-top:1px solid #e8eaee;
+    padding:12px 14px calc(env(safe-area-inset-bottom) + 12px)}
+  .cta .inner{max-width:560px;margin:0 auto}
+  .save{width:100%;border:none;border-radius:14px;background:#3B5BDB;color:#fff;font-size:16px;font-weight:700;
+    padding:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+    -webkit-tap-highlight-color:transparent;transition:transform .1s,background .15s}
+  .save:active{transform:scale(.98);background:#314fc4}
+  .save svg{width:19px;height:19px}
+</style>
 </head>
 <body>
-<div class="page">
-  <div class="banner">
-    <h1>➕ New Lead</h1>
-    <p>Snap the card, type the number, done. Only phone is required.</p>
-  </div>
+<div class="app">
+  <header class="appbar">
+    <h1>New Lead</h1>
+    <p>Snap the card, type the number — only phone is required</p>
+  </header>
 
-  <form id="f">
-    <label class="fld">Phone <span class="req">*</span></label>
-    <input id="phone" type="tel" inputmode="tel" required placeholder="98xxxxxxxx">
+  <form id="f" class="form">
+    <!-- Card photos -->
+    <section class="sec">
+      <div class="sec-t">Visiting card</div>
+      <div class="tiles">
+        <label class="tile">
+          <input type="file" accept="image/*" capture="environment" data-side="front">
+          <img hidden alt="">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <span>Front</span>
+        </label>
+        <label class="tile">
+          <input type="file" accept="image/*" capture="environment" data-side="back">
+          <img hidden alt="">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <span>Back (optional)</span>
+        </label>
+      </div>
+    </section>
 
-    <div class="photos">
-      <label class="photobox">📷 Card front
-        <input type="file" accept="image/*" capture="environment" data-side="front">
-        <img hidden>
-      </label>
-      <label class="photobox">📷 Back (optional)
-        <input type="file" accept="image/*" capture="environment" data-side="back">
-        <img hidden>
-      </label>
-    </div>
+    <!-- Contact -->
+    <section class="sec">
+      <div class="sec-t">Contact</div>
+      <div class="field">
+        <label>Phone <span class="req">*</span></label>
+        <input id="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="98xxxxxxxx">
+        <div class="hint">Used for the WhatsApp follow-up — double-check it</div>
+      </div>
+      <div class="field"><label>Name</label><input id="name" autocomplete="name"></div>
+      <div class="field"><label>Company</label><input id="company" autocomplete="organization"></div>
+    </section>
 
-    <label class="fld">Name</label><input id="name">
-    <label class="fld">Company</label><input id="company">
-    <label class="fld">Email</label><input id="email" type="email" inputmode="email">
-    <label class="fld">Website</label><input id="website" inputmode="url">
-    <label class="fld">City</label><input id="city">
-    <label class="fld">State / region</label><input id="state">
-    <label class="fld">Products / interest</label><input id="products">
-    <label class="fld">Priority</label>
-    <select id="tag"><option value="">—</option><option value="hot">🔴 Hot</option><option value="warm">🟡 Warm</option><option value="cold">🟢 Cold</option></select>
-    <label class="fld">Note</label><textarea id="note"></textarea>
+    <!-- Details -->
+    <section class="sec">
+      <div class="sec-t">Details</div>
+      <div class="field"><label>Email</label><input id="email" type="email" inputmode="email" autocomplete="email"></div>
+      <div class="field"><label>Website</label><input id="website" inputmode="url" autocomplete="url"></div>
+      <div class="field"><label>City</label><input id="city"></div>
+      <div class="field"><label>State / region</label><input id="state"></div>
+      <div class="field"><label>Products / interest</label><input id="products"></div>
+    </section>
 
-    <button class="btn-primary" type="submit">Save lead</button>
+    <!-- Priority + note -->
+    <section class="sec">
+      <div class="sec-t">Priority</div>
+      <input id="tag" type="hidden">
+      <div class="chips">
+        <button type="button" class="chip" data-val="hot"><span class="dot"></span>Hot</button>
+        <button type="button" class="chip" data-val="warm"><span class="dot"></span>Warm</button>
+        <button type="button" class="chip" data-val="cold"><span class="dot"></span>Cold</button>
+      </div>
+      <div class="field" style="margin-top:14px"><label>Note</label><textarea id="note" placeholder="e.g. wants bulk pricing"></textarea></div>
+    </section>
   </form>
+
+  <div class="cta">
+    <div class="inner">
+      <button class="save" type="submit" form="f">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Save lead
+      </button>
+    </div>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -69,6 +166,16 @@ document.querySelectorAll('input[type=file]').forEach(inp => {
   inp.onchange = e => { if (e.target.files[0]) shrink(e.target.files[0], inp.dataset.side, inp.nextElementSibling); };
 });
 
+// Priority chips drive the hidden #tag input.
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.onclick = () => {
+    const on = chip.classList.contains('on');
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    if (!on) { chip.classList.add('on'); document.getElementById('tag').value = chip.dataset.val; }
+    else document.getElementById('tag').value = "";
+  };
+});
+
 function toast(msg, ok = true) {
   const t = document.getElementById("toast");
   t.textContent = msg; t.style.background = ok ? "#0B7A5E" : "#C92A2A";
@@ -94,9 +201,11 @@ async function send(confirm) {
   if (r.status === 400) return toast("Enter a valid phone number", false);
   if (!r.ok) return toast("Save failed — try again", false);
   document.getElementById("f").reset();
-  document.querySelectorAll('.photobox img').forEach(i => { i.hidden = true; i.src = ""; });
+  document.querySelectorAll('.tile img').forEach(i => { i.hidden = true; i.src = ""; });
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
   photos.front = photos.back = null;
   document.getElementById("phone").focus();
+  window.scrollTo({ top: 0, behavior: "smooth" });
   toast("Lead saved ✓");
 }
 
