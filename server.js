@@ -23,13 +23,14 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     phone TEXT NOT NULL,
     wa_phone TEXT,
-    name TEXT, company TEXT, city TEXT, products TEXT, note TEXT,
+    name TEXT, company TEXT, email TEXT, city TEXT, products TEXT, note TEXT,
     tag TEXT,
     front_photo TEXT, back_photo TEXT,
     created_at TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
 `);
+try { db.exec("ALTER TABLE leads ADD COLUMN email TEXT"); } catch { /* already migrated */ }
 
 const DEFAULT_TEMPLATE =
   "Hi {name}, great meeting you at our stall! Here's our catalogue — would love to work with you.";
@@ -69,14 +70,15 @@ app.post("/api/leads", (req, res) => {
 
   const info = db
     .prepare(
-      `INSERT INTO leads (phone, wa_phone, name, company, city, products, note, tag, created_at)
-       VALUES (@phone,@wa,@name,@company,@city,@products,@note,@tag,@created_at)`
+      `INSERT INTO leads (phone, wa_phone, name, company, email, city, products, note, tag, created_at)
+       VALUES (@phone,@wa,@name,@company,@email,@city,@products,@note,@tag,@created_at)`
     )
     .run({
       phone: String(b.phone).trim(),
       wa,
       name: b.name || null,
       company: b.company || null,
+      email: b.email || null,
       city: b.city || null,
       products: b.products || null,
       note: b.note || null,
@@ -118,7 +120,7 @@ app.post("/api/leads/:id/enrich", async (req, res) => {
 
   const prompt =
     "This is a business/visiting card. Extract these fields as JSON: " +
-    '{"name":..., "company":..., "city":..., "products":...}. ' +
+    '{"name":..., "company":..., "email":..., "city":..., "products":...}. ' +
     "Use null for any field that is not clearly legible. Do not guess.";
   const model = process.env.OCR_MODEL || "gemini-2.5-flash";
 
@@ -132,7 +134,11 @@ app.post("/api/leads/:id/enrich", async (req, res) => {
         headers: { "x-goog-api-key": key, "content-type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts }],
-          generationConfig: { responseMimeType: "application/json", maxOutputTokens: 400 },
+          generationConfig: {
+            responseMimeType: "application/json",
+            maxOutputTokens: 800,
+            thinkingConfig: { thinkingBudget: 0 }, // OCR needs no reasoning; thinking ate the output budget
+          },
         }),
       }
     );
