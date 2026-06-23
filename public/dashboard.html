@@ -8,9 +8,17 @@
 </head>
 <body>
 <div class="page">
+
   <div class="banner">
-    <h1>📋 Leads</h1>
-    <p><span id="count">0</span> captured · tap WA to follow up (needs internet)</p>
+    <h1>🎯 Captured Leads</h1>
+    <p>Leads collected at the stall · tap 💬 WhatsApp to follow up (needs internet)</p>
+  </div>
+
+  <div class="metrics">
+    <div class="metric"><b id="m-total">0</b><span>Total</span></div>
+    <div class="metric"><b id="m-hot">0</b><span>🔴 Hot</span></div>
+    <div class="metric"><b id="m-warm">0</b><span>🟡 Warm</span></div>
+    <div class="metric"><b id="m-cold">0</b><span>🟢 Cold</span></div>
   </div>
 
   <div class="tools">
@@ -18,16 +26,16 @@
     <select id="filter"><option value="">All</option><option value="hot">🔴 Hot</option><option value="warm">🟡 Warm</option><option value="cold">🟢 Cold</option></select>
   </div>
 
-  <details style="margin-bottom:12px">
-    <summary style="cursor:pointer;font-size:13px;color:#3B5BDB">✏️ Edit WhatsApp message template</summary>
+  <details>
+    <summary>✏️ Edit WhatsApp message template</summary>
     <textarea id="tpl" style="margin-top:8px"></textarea>
-    <p class="muted">Use <code>{name}</code> for the lead's name. </p>
-    <button class="btn" style="background:#eef;color:#3B5BDB;margin-top:6px" onclick="saveTpl()">Save template</button>
+    <p style="font-size:11px;color:#6b7280;margin-top:4px">Use <code>{name}</code> for the lead's name.</p>
+    <button class="btn-primary" style="margin-top:6px" onclick="saveTpl()">Save template</button>
   </details>
 
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>Card</th><th>Lead</th><th>Location</th><th>Products</th><th>WhatsApp</th></tr></thead>
+      <thead><tr><th>Lead</th><th>Location</th><th>Products / note</th><th>Phone</th></tr></thead>
       <tbody id="rows"></tbody>
     </table>
   </div>
@@ -35,50 +43,72 @@
 
 <script>
 let leads = [], template = "";
+const $ = id => document.getElementById(id);
+function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 
-function esc(s) { return (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
-
-function waLink(l) {
+function waLink(l){
   const msg = template.replace(/{name}/g, l.name || "there");
   return `https://wa.me/${l.wa_phone}?text=${encodeURIComponent(msg)}`;
 }
 
-function render() {
-  const q = search.value.toLowerCase(), f = filter.value;
+function render(){
+  const q = $("search").value.toLowerCase(), f = $("filter").value;
+  $("m-total").textContent = leads.length;
+  $("m-hot").textContent = leads.filter(l=>l.tag==="hot").length;
+  $("m-warm").textContent = leads.filter(l=>l.tag==="warm").length;
+  $("m-cold").textContent = leads.filter(l=>l.tag==="cold").length;
+
   const rows = leads.filter(l =>
-    (!f || l.tag === f) &&
-    (!q || [l.name, l.company, l.phone].some(x => (x || "").toLowerCase().includes(q)))
+    (!f || l.tag===f) &&
+    (!q || [l.name,l.company,l.phone].some(x=>(x||"").toLowerCase().includes(q)))
   );
-  count.textContent = leads.length;
-  document.getElementById("rows").innerHTML = rows.map(l => `
-    <tr>
-      <td>${l.front_photo ? `<a href="/${l.front_photo}" target="_blank"><img class="thumb" src="/${l.front_photo}"></a>` : "—"}</td>
-      <td><div class="co">${esc(l.name) || "(no name)"} ${l.tag ? `<span class="tag ${l.tag}">${l.tag}</span>` : ""}</div>
-          <div class="muted">${esc(l.company)}</div><div class="muted">${esc(l.phone)}</div></td>
-      <td class="muted">${esc(l.city)}</td>
-      <td class="muted">${esc(l.products)}${l.note ? `<div>📝 ${esc(l.note)}</div>` : ""}</td>
-      <td><a class="wa" href="${waLink(l)}" target="_blank">💬 WhatsApp</a></td>
-    </tr>`).join("");
+
+  $("rows").innerHTML = rows.map(l => {
+    const title = esc(l.name) || esc(l.company) || "(no name)";
+    const sub = l.name && l.company ? esc(l.company) : "";
+    const tag = l.tag ? `<span class="tag ${l.tag}">${l.tag}</span>` : "";
+    const thumb = l.front_photo
+      ? `<a href="/${l.front_photo}" target="_blank"><img class="thumb" src="/${l.front_photo}"></a>`
+      : `<div class="nothumb">🪪</div>`;
+    return `<tr>
+      <td>
+        <div style="display:flex;gap:9px">
+          ${thumb}
+          <div>
+            <div class="co">${title}${tag}</div>
+            ${sub ? `<div class="ct">${sub}</div>` : ""}
+            <div class="acts">
+              <a class="btn bw" href="${waLink(l)}" target="_blank">💬 WhatsApp</a>
+              <a class="btn bp" href="tel:+${l.wa_phone}">📞</a>
+            </div>
+          </div>
+        </div>
+      </td>
+      <td>${l.city ? `<span class="sp">${esc(l.city)}</span>` : "—"}</td>
+      <td class="pr">${esc(l.products) || "—"}${l.note ? `<div style="margin-top:3px">📝 ${esc(l.note)}</div>` : ""}</td>
+      <td class="pr">${esc(l.phone)}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:24px">No leads yet</td></tr>`;
 }
 
-async function saveTpl() {
-  template = tpl.value;
-  await fetch("/api/template", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ template }) });
+async function saveTpl(){
+  template = $("tpl").value;
+  await fetch("/api/template",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({template})});
   render();
 }
 
-async function load() {
-  [leads, { template }] = await Promise.all([
-    fetch("/api/leads").then(r => r.json()),
-    fetch("/api/template").then(r => r.json()),
+async function load(){
+  const [a,b] = await Promise.all([
+    fetch("/api/leads").then(r=>r.json()),
+    fetch("/api/template").then(r=>r.json()),
   ]);
-  tpl.value = template;
+  leads = a; template = b.template; $("tpl").value = template;
   render();
 }
 
-search.oninput = render; filter.onchange = render;
+$("search").oninput = render; $("filter").onchange = render;
 load();
-setInterval(load, 15000); // keep dashboard fresh while phones add leads
+setInterval(load, 15000);
 </script>
 </body>
 </html>

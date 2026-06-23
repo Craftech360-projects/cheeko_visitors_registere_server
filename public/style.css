@@ -1,35 +1,60 @@
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f5f7;color:#1a1a2e;font-size:15px;line-height:1.5}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f5f7;color:#1a1a2e;font-size:14px;line-height:1.5}
 a{color:#3B5BDB;text-decoration:none}
-.page{max-width:640px;margin:0 auto;padding:16px 12px 60px}
-.banner{background:#fff;border:1px solid #dde;border-radius:12px;padding:14px 16px;margin-bottom:14px}
-.banner h1{font-size:16px;font-weight:700}
+.page{max-width:900px;margin:0 auto;padding:16px 12px 60px}
+
+/* BANNER */
+.banner{background:#fff;border:1px solid #dde;border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.banner h1{font-size:15px;font-weight:700;margin-bottom:4px}
 .banner p{font-size:12px;color:#6b7280}
 
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.metric{background:#fff;border:1px solid #dde;border-radius:10px;padding:10px;text-align:center}
+.metric b{display:block;font-size:22px;font-weight:800}
+.metric span{font-size:10px;color:#6b7280}
+
+/* ── CAPTURE FORM ── */
 label.fld{display:block;font-size:12px;font-weight:600;color:#6b7280;margin:12px 0 4px}
 input,select,textarea{width:100%;font-size:16px;padding:11px 12px;border:1px solid #dde;border-radius:9px;background:#fff;font-family:inherit}
-input:focus,select,textarea:focus{outline:2px solid #3B5BDB33;border-color:#3B5BDB}
+input:focus,select:focus,textarea:focus{outline:2px solid #3B5BDB33;border-color:#3B5BDB}
 textarea{min-height:60px;resize:vertical}
 .req{color:#FA5252}
 .photos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
-.photobox{border:1px dashed #bcc;border-radius:9px;padding:10px;text-align:center;font-size:12px;color:#6b7280;background:#fff}
+.photobox{border:1px dashed #bcc;border-radius:9px;padding:10px;text-align:center;font-size:12px;color:#6b7280;background:#fff;cursor:pointer}
 .photobox img{max-width:100%;border-radius:6px;margin-top:6px}
 .photobox input{display:none}
-.btn{display:inline-block;font-weight:700;padding:13px 16px;border-radius:9px;border:none;cursor:pointer;font-size:16px}
-.primary{background:#3B5BDB;color:#fff;width:100%;margin-top:18px}
-.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0B7A5E;color:#fff;padding:12px 20px;border-radius:30px;font-weight:600;opacity:0;transition:.3s;pointer-events:none}
+.btn-primary{display:block;width:100%;font-weight:700;padding:13px 16px;border-radius:9px;border:none;cursor:pointer;font-size:16px;background:#3B5BDB;color:#fff;margin-top:18px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0B7A5E;color:#fff;padding:12px 20px;border-radius:30px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;z-index:9}
 .toast.show{opacity:1}
 
-/* dashboard */
+/* ── DASHBOARD TOOLS ── */
 .tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
-.tools input{flex:1;min-width:160px}
-.tbl-wrap{overflow-x:auto;border:1px solid #dde;border-radius:12px}
-table{width:100%;border-collapse:collapse;background:#fff;min-width:560px}
-thead th{background:#f8f9fa;font-size:11px;font-weight:700;color:#6b7280;text-align:left;padding:9px 10px;border-bottom:1px solid #dde}
-td{padding:9px 10px;border-bottom:1px solid #f1f3f5;vertical-align:top;font-size:13px}
-.co{font-weight:600}
-.muted{font-size:11px;color:#6b7280}
-.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px}
+.tools input{flex:1;min-width:180px}
+.tools select{width:auto}
+details{background:#fff;border:1px solid #dde;border-radius:10px;padding:10px 14px;margin-bottom:14px}
+summary{cursor:pointer;font-size:13px;font-weight:600;color:#3B5BDB}
+
+/* ── MEMBERS-STYLE TABLE (matches cheeko reference) ── */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #dde;border-radius:12px}
+table{width:100%;border-collapse:collapse;background:#fff;min-width:600px}
+thead th{background:#f8f9fa;font-size:11px;font-weight:700;color:#6b7280;text-align:left;padding:9px 10px;border-bottom:1px solid #dde;white-space:nowrap}
+tbody tr{border-bottom:1px solid #f1f3f5}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#fafbff}
+td{padding:8px 10px;vertical-align:top}
+.co{font-weight:600;font-size:13px;color:#1a1a2e}
+.ct{font-size:11px;color:#6b7280;margin-top:2px}
+.pr{font-size:11px;color:#4b5563}
+.thumb{width:46px;height:46px;object-fit:cover;border-radius:7px;border:1px solid #dde}
+.nothumb{width:46px;height:46px;border-radius:7px;border:1px dashed #cdd;display:flex;align-items:center;justify-content:center;color:#bcc;font-size:18px}
+
+/* location pill + priority tag */
+.sp{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap;background:#EEF4FF;color:#3B5BDB}
+.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;margin-left:4px}
 .hot{background:#FFF0F6;color:#A61E4D}.warm{background:#FFF4E6;color:#8E4B0A}.cold{background:#E6FCF5;color:#0B7A5E}
-.wa{background:#DCFCE7;color:#15803D;font-weight:700;padding:6px 10px;border-radius:6px;font-size:12px;white-space:nowrap}
-.thumb{width:42px;height:42px;object-fit:cover;border-radius:6px;border:1px solid #dde}
+
+/* action buttons (cheeko bw/be/bp) */
+.acts{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.btn{display:inline-block;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap}
+.bw{background:#DCFCE7;color:#15803D}.bp{background:#F1F3F5;color:#374151}
