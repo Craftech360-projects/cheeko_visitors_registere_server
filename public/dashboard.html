@@ -41,9 +41,33 @@
     </table>
   </div>
 </div>
+<div class="toast" id="toast"></div>
 
 <script>
 let leads = [], template = "";
+function toast(msg, ok = true) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.style.background = ok ? "#0B7A5E" : "#C92A2A";
+  t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+async function enrich(id, btn) {
+  const label = btn.textContent; btn.textContent = "…"; btn.disabled = true;
+  try {
+    const r = await fetch(`/api/leads/${id}/enrich`, { method: "POST" });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      toast(d.error === "ocr_not_configured"
+        ? "Set ANTHROPIC_API_KEY on the server to enable OCR"
+        : "Enrich failed: " + (d.error || r.status), false);
+      return;
+    }
+    await load();
+    toast(d.filled && d.filled.length ? "Filled: " + d.filled.join(", ") : "Nothing new found on the card");
+  } finally {
+    btn.textContent = label; btn.disabled = false;
+  }
+}
 const $ = id => document.getElementById(id);
 function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 
@@ -81,6 +105,7 @@ function render(){
             <div class="acts">
               <a class="btn bw" href="${waLink(l)}" target="_blank">💬 WhatsApp</a>
               <a class="btn bp" href="tel:+${l.wa_phone}">📞</a>
+              ${l.front_photo ? `<button class="btn be" onclick="enrich(${l.id},this)">✨ Enrich</button>` : ""}
             </div>
           </div>
         </div>

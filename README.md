@@ -40,7 +40,18 @@ On boot it prints the LAN URLs:
 npm test    # node --test — covers phone normalization (the WhatsApp-critical bit)
 ```
 
-## v2 (when internet is back)
+## v2 enrichment — OCR (when internet is back)
 
-Dashboard-triggered OCR enrichment of card photos to fill blank fields. Not
-built yet — see [ADR 0002](docs/adr/0002-defer-ocr-to-online-enrichment.md).
+Each lead with a card photo shows an **✨ Enrich** button on the dashboard. It
+sends the photo to Claude (vision) and fills in any **blank** fields it can
+read — never overwriting what staff typed, never touching the phone number,
+skipping anything it can't read. See [ADR 0002](docs/adr/0002-defer-ocr-to-online-enrichment.md).
+
+Enable it by setting an env var before `npm start` (internet required):
+
+```
+ANTHROPIC_API_KEY=sk-ant-...    # required to turn on Enrich
+OCR_MODEL=claude-haiku-4-5-20251001   # optional, this is the default
+```
+
+Without the key, Enrich returns "not configured" and changes nothing.

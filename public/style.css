@@ -56,5 +56,5 @@ td{padding:8px 10px;vertical-align:top}
 
 /* action buttons (cheeko bw/be/bp) */
 .acts{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
-.btn{display:inline-block;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap}
-.bw{background:#DCFCE7;color:#15803D}.bp{background:#F1F3F5;color:#374151}
+.btn{display:inline-block;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap;border:none;cursor:pointer;font-family:inherit}
+.bw{background:#DCFCE7;color:#15803D}.bp{background:#F1F3F5;color:#374151}.be{background:#EEF4FF;color:#3B5BDB}

@@ -6,6 +6,7 @@ const QRCode = require("qrcode");
 const { normalizeForWa } = require("./lib/phone");
 const { lanIp } = require("./lib/net");
 const { toCsv } = require("./lib/csv");
+const { mergeEnrichment, parseOcrJson } = require("./lib/enrich");
 
 const PORT = process.env.PORT || 8080;
 const ROOT = __dirname;
@@ -94,6 +95,53 @@ app.post("/api/leads", (req, res) => {
 
 app.get("/api/leads", (_req, res) => {
   res.json(db.prepare("SELECT * FROM leads ORDER BY created_at DESC").all());
+});
+
+// v2 (ADR 0002): OCR-enrich a lead's BLANK fields from its card photo(s).
+// Internet + ANTHROPIC_API_KEY required. Never overwrites human input or phone.
+app.post("/api/leads/:id/enrich", async (req, res) => {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return res.status(400).json({ error: "ocr_not_configured" });
+  const lead = db.prepare("SELECT * FROM leads WHERE id=?").get(req.params.id);
+  if (!lead) return res.status(404).json({ error: "not_found" });
+
+  const images = [];
+  for (const p of [lead.front_photo, lead.back_photo]) {
+    if (!p) continue;
+    try {
+      const data = fs.readFileSync(path.join(ROOT, p)).toString("base64");
+      images.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data } });
+    } catch { /* missing file: skip */ }
+  }
+  if (!images.length) return res.status(400).json({ error: "no_photo" });
+
+  const prompt =
+    "This is a business/visiting card. Extract these fields and respond with ONLY a JSON object, no markdown: " +
+    '{"name":..., "company":..., "city":..., "products":...}. ' +
+    "Use null for any field that is not clearly legible. Do not guess.";
+
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({
+        model: process.env.OCR_MODEL || "claude-haiku-4-5-20251001",
+        max_tokens: 400,
+        messages: [{ role: "user", content: [...images, { type: "text", text: prompt }] }],
+      }),
+    });
+    if (!r.ok) return res.status(502).json({ error: "ocr_failed", status: r.status });
+    const data = await r.json();
+    const ocr = parseOcrJson(data.content && data.content[0] && data.content[0].text);
+    const { updates, filled } = mergeEnrichment(lead, ocr); // filled ⊆ whitelisted fields
+    if (filled.length) {
+      const set = filled.map((f) => `${f}=@${f}`).join(", ");
+      db.prepare(`UPDATE leads SET ${set} WHERE id=@id`).run({ ...updates, id: lead.id });
+    }
+    res.json({ filled, updates });
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
 });
 
 // Export all leads as a CSV download (open in Excel / Google Sheets).
