@@ -5,3 +5,5 @@ backups/
 *.log
 .env
 .claude/
+visitors.db-wal
+visitors.db-shm
