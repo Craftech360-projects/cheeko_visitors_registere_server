@@ -23,14 +23,17 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     phone TEXT NOT NULL,
     wa_phone TEXT,
-    name TEXT, company TEXT, email TEXT, city TEXT, products TEXT, note TEXT,
+    name TEXT, company TEXT, email TEXT, website TEXT, city TEXT, state TEXT, products TEXT, note TEXT,
     tag TEXT,
     front_photo TEXT, back_photo TEXT,
     created_at TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
 `);
-try { db.exec("ALTER TABLE leads ADD COLUMN email TEXT"); } catch { /* already migrated */ }
+// Migrations for DBs created before these columns existed.
+for (const col of ["email", "website", "state"]) {
+  try { db.exec(`ALTER TABLE leads ADD COLUMN ${col} TEXT`); } catch { /* already present */ }
+}
 
 const DEFAULT_TEMPLATE =
   "Hi {name}, great meeting you at our stall! Here's our catalogue — would love to work with you.";
@@ -70,8 +73,8 @@ app.post("/api/leads", (req, res) => {
 
   const info = db
     .prepare(
-      `INSERT INTO leads (phone, wa_phone, name, company, email, city, products, note, tag, created_at)
-       VALUES (@phone,@wa,@name,@company,@email,@city,@products,@note,@tag,@created_at)`
+      `INSERT INTO leads (phone, wa_phone, name, company, email, website, city, state, products, note, tag, created_at)
+       VALUES (@phone,@wa,@name,@company,@email,@website,@city,@state,@products,@note,@tag,@created_at)`
     )
     .run({
       phone: String(b.phone).trim(),
@@ -79,7 +82,9 @@ app.post("/api/leads", (req, res) => {
       name: b.name || null,
       company: b.company || null,
       email: b.email || null,
+      website: b.website || null,
       city: b.city || null,
+      state: b.state || null,
       products: b.products || null,
       note: b.note || null,
       tag: b.tag || null,
@@ -100,7 +105,7 @@ app.get("/api/leads", (_req, res) => {
 });
 
 // v2 (ADR 0002): OCR-enrich a lead's BLANK fields from its card photo(s).
-// Internet + ANTHROPIC_API_KEY required. Never overwrites human input or phone.
+// Internet + GOOGLE_API_KEY required. Never overwrites human input or phone.
 app.post("/api/leads/:id/enrich", async (req, res) => {
   const key = process.env.GOOGLE_API_KEY; // Gemini key from Google AI Studio
   if (!key) return res.status(400).json({ error: "ocr_not_configured" });
@@ -120,7 +125,7 @@ app.post("/api/leads/:id/enrich", async (req, res) => {
 
   const prompt =
     "This is a business/visiting card. Extract these fields as JSON: " +
-    '{"name":..., "company":..., "email":..., "city":..., "products":...}. ' +
+    '{"name":..., "company":..., "email":..., "website":..., "city":..., "state":..., "products":...}. ' +
     "Use null for any field that is not clearly legible. Do not guess.";
   const model = process.env.OCR_MODEL || "gemini-2.5-flash";
 

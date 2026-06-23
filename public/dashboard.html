@@ -103,6 +103,7 @@ function render(){
             <div class="co">${title}${tag}</div>
             ${sub ? `<div class="ct">${sub}</div>` : ""}
             ${l.email ? `<div class="ct">✉️ ${esc(l.email)}</div>` : ""}
+            ${l.website ? `<div class="ct">🌐 <a href="${/^https?:\/\//.test(l.website) ? esc(l.website) : "https://" + esc(l.website)}" target="_blank">${esc(l.website)}</a></div>` : ""}
             <div class="acts">
               <a class="btn bw" href="${waLink(l)}" target="_blank">💬 WhatsApp</a>
               ${l.email ? `<a class="btn be" href="mailto:${esc(l.email)}">✉️ Email</a>` : ""}
@@ -112,7 +113,7 @@ function render(){
           </div>
         </div>
       </td>
-      <td>${l.city ? `<span class="sp">${esc(l.city)}</span>` : "—"}</td>
+      <td>${l.state ? `<span class="sp">${esc(l.state)}</span><br>` : ""}${l.city ? `<span class="muted">${esc(l.city)}</span>` : (l.state ? "" : "—")}</td>
       <td class="pr">${esc(l.products) || "—"}${l.note ? `<div style="margin-top:3px">📝 ${esc(l.note)}</div>` : ""}</td>
       <td class="pr">${esc(l.phone)}</td>
     </tr>`;

@@ -46,6 +46,7 @@ td{padding:8px 10px;vertical-align:top}
 .co{font-weight:600;font-size:13px;color:#1a1a2e}
 .ct{font-size:11px;color:#6b7280;margin-top:2px}
 .pr{font-size:11px;color:#4b5563}
+.muted{font-size:11px;color:#6b7280}
 .thumb{width:46px;height:46px;object-fit:cover;border-radius:7px;border:1px solid #dde}
 .nothumb{width:46px;height:46px;border-radius:7px;border:1px dashed #cdd;display:flex;align-items:center;justify-content:center;color:#bcc;font-size:18px}
 

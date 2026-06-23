@@ -31,7 +31,9 @@
     <label class="fld">Name</label><input id="name">
     <label class="fld">Company</label><input id="company">
     <label class="fld">Email</label><input id="email" type="email" inputmode="email">
+    <label class="fld">Website</label><input id="website" inputmode="url">
     <label class="fld">City</label><input id="city">
+    <label class="fld">State / region</label><input id="state">
     <label class="fld">Products / interest</label><input id="products">
     <label class="fld">Priority</label>
     <select id="tag"><option value="">—</option><option value="hot">🔴 Hot</option><option value="warm">🟡 Warm</option><option value="cold">🟢 Cold</option></select>
@@ -79,7 +81,8 @@ async function send(confirm) {
   // Read by id explicitly — bare `name` would resolve to window.name, not the input.
   const body = {
     phone: val("phone"), name: val("name"), company: val("company"), email: val("email"),
-    city: val("city"), products: val("products"), note: val("note"), tag: val("tag"),
+    website: val("website"), city: val("city"), state: val("state"),
+    products: val("products"), note: val("note"), tag: val("tag"),
     frontPhoto: photos.front, backPhoto: photos.back, confirm,
   };
   const r = await fetch("/api/leads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
