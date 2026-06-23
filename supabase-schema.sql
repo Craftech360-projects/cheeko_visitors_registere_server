@@ -22,5 +22,6 @@ create table if not exists public.leads (
   tag         text,
   front_url   text,                  -- public URL of the front card photo
   back_url    text,                  -- public URL of the back card photo
+  enriched_at timestamptz,           -- set when OCR enrichment was run (null = pending)
   created_at  timestamptz
 );

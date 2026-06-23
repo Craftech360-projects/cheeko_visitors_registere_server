@@ -27,12 +27,13 @@ db.exec(`
     name TEXT, company TEXT, email TEXT, website TEXT, city TEXT, state TEXT, products TEXT, note TEXT,
     tag TEXT,
     front_photo TEXT, back_photo TEXT,
+    enriched_at TEXT,
     created_at TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
 `);
 // Migrations for DBs created before these columns existed.
-for (const col of ["email", "website", "state"]) {
+for (const col of ["email", "website", "state", "enriched_at"]) {
   try { db.exec(`ALTER TABLE leads ADD COLUMN ${col} TEXT`); } catch { /* already present */ }
 }
 
@@ -151,14 +152,12 @@ app.get("/api/leads", (_req, res) => {
   res.json(db.prepare("SELECT * FROM leads ORDER BY created_at DESC").all());
 });
 
-// v2 (ADR 0002): OCR-enrich a lead's BLANK fields from its card photo(s).
-// Internet + GOOGLE_API_KEY required. Never overwrites human input or phone.
-app.post("/api/leads/:id/enrich", async (req, res) => {
-  const key = process.env.GOOGLE_API_KEY; // Gemini key from Google AI Studio
-  if (!key) return res.status(400).json({ error: "ocr_not_configured" });
-  const lead = db.prepare("SELECT * FROM leads WHERE id=?").get(req.params.id);
-  if (!lead) return res.status(404).json({ error: "not_found" });
-
+// v2 (ADR 0002): OCR core. Fills a lead's BLANK fields from its card photo(s),
+// stamps enriched_at (even if nothing was filled — it was attempted), and pushes
+// to Supabase if configured. Throws Error with .code ("no_photo"|"ocr_failed").
+// Shared by the single (✨) and bulk (Enrich all) routes.
+async function enrichLead(lead) {
+  const key = process.env.GOOGLE_API_KEY;
   const images = []; // {data, mime} for each card photo
   for (const p of [lead.front_photo, lead.back_photo]) {
     if (!p) continue;
@@ -168,7 +167,7 @@ app.post("/api/leads/:id/enrich", async (req, res) => {
       images.push({ data: buf.toString("base64"), mime });
     } catch { /* missing file: skip */ }
   }
-  if (!images.length) return res.status(400).json({ error: "no_photo" });
+  if (!images.length) { const e = new Error("no_photo"); e.code = "no_photo"; throw e; }
 
   const prompt =
     "This is a business/visiting card. Extract these fields as JSON: " +
@@ -176,51 +175,75 @@ app.post("/api/leads/:id/enrich", async (req, res) => {
     "Use null for any field that is not clearly legible. Do not guess.";
   const model = process.env.OCR_MODEL || "gemini-2.5-flash";
 
+  const parts = images.map((im) => ({ inline_data: { mime_type: im.mime, data: im.data } }));
+  parts.push({ text: prompt });
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    {
+      method: "POST",
+      headers: { "x-goog-api-key": key, "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          maxOutputTokens: 800,
+          thinkingConfig: { thinkingBudget: 0 }, // OCR needs no reasoning; thinking ate the output budget
+        },
+      }),
+    }
+  );
+  if (!r.ok) {
+    const body = await r.text().catch(() => "");
+    console.error(`[enrich #${lead.id}] Gemini ${r.status}: ${body.slice(0, 300)}`);
+    const e = new Error("ocr_failed"); e.code = "ocr_failed"; e.status = r.status; throw e;
+  }
+  const data = await r.json();
+  const c = data.candidates && data.candidates[0];
+  const text = c && c.content && c.content.parts && c.content.parts[0] && c.content.parts[0].text;
+  const ocr = parseOcrJson(text);
+  const { updates, filled } = mergeEnrichment(lead, ocr); // filled ⊆ whitelisted fields
+  const sets = filled.map((f) => `${f}=@${f}`).concat("enriched_at=@enriched_at");
+  db.prepare(`UPDATE leads SET ${sets.join(", ")} WHERE id=@id`)
+    .run({ ...updates, enriched_at: new Date().toISOString(), id: lead.id });
+  console.log(`[enrich #${lead.id}] filled: ${filled.join(", ") || "(none)"}`);
+
+  const supa = supaConfig(); // auto-push (best-effort; never fails the enrich)
+  if (supa) {
+    const fresh = db.prepare("SELECT * FROM leads WHERE id=?").get(lead.id);
+    try { await syncLead(supa, fresh); console.log(`[enrich #${lead.id}] synced to Supabase`); }
+    catch (e) { console.error(`[enrich #${lead.id}] Supabase sync failed:`, e.message); }
+  }
+  return { filled };
+}
+
+// Enrich one lead (the ✨ button). Internet + GOOGLE_API_KEY required.
+app.post("/api/leads/:id/enrich", async (req, res) => {
+  if (!process.env.GOOGLE_API_KEY) return res.status(400).json({ error: "ocr_not_configured" });
+  const lead = db.prepare("SELECT * FROM leads WHERE id=?").get(req.params.id);
+  if (!lead) return res.status(404).json({ error: "not_found" });
   try {
-    const parts = images.map((im) => ({ inline_data: { mime_type: im.mime, data: im.data } }));
-    parts.push({ text: prompt });
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: "POST",
-        headers: { "x-goog-api-key": key, "content-type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            maxOutputTokens: 800,
-            thinkingConfig: { thinkingBudget: 0 }, // OCR needs no reasoning; thinking ate the output budget
-          },
-        }),
-      }
-    );
-    if (!r.ok) {
-      const body = await r.text().catch(() => "");
-      console.error(`[enrich #${lead.id}] Gemini ${r.status}: ${body.slice(0, 300)}`);
-      return res.status(502).json({ error: "ocr_failed", status: r.status });
-    }
-    const data = await r.json();
-    const c = data.candidates && data.candidates[0];
-    const text = c && c.content && c.content.parts && c.content.parts[0] && c.content.parts[0].text;
-    const ocr = parseOcrJson(text);
-    const { updates, filled } = mergeEnrichment(lead, ocr); // filled ⊆ whitelisted fields
-    if (filled.length) {
-      const set = filled.map((f) => `${f}=@${f}`).join(", ");
-      db.prepare(`UPDATE leads SET ${set} WHERE id=@id`).run({ ...updates, id: lead.id });
-    }
-    console.log(`[enrich #${lead.id}] filled: ${filled.join(", ") || "(none)"}`);
-    // Auto-push this lead to Supabase if configured (best-effort; never fails the enrich).
-    const supa = supaConfig();
-    if (supa) {
-      const fresh = db.prepare("SELECT * FROM leads WHERE id=?").get(lead.id);
-      try { await syncLead(supa, fresh); console.log(`[enrich #${lead.id}] synced to Supabase`); }
-      catch (e) { console.error(`[enrich #${lead.id}] Supabase sync failed:`, e.message); }
-    }
-    res.json({ filled, updates });
+    const { filled } = await enrichLead(lead);
+    res.json({ filled });
   } catch (e) {
+    if (e.code === "no_photo") return res.status(400).json({ error: "no_photo" });
+    if (e.code === "ocr_failed") return res.status(502).json({ error: "ocr_failed", status: e.status });
     console.error(`[enrich #${lead.id}] error:`, e);
     res.status(502).json({ error: String(e) });
   }
+});
+
+// Enrich ALL pending leads (have a photo, never enriched). The bulk button.
+app.post("/api/enrich-all", async (_req, res) => {
+  if (!process.env.GOOGLE_API_KEY) return res.status(400).json({ error: "ocr_not_configured" });
+  const pending = db.prepare("SELECT * FROM leads WHERE enriched_at IS NULL AND front_photo IS NOT NULL").all();
+  let enriched = 0;
+  const errors = [];
+  for (const lead of pending) {
+    try { await enrichLead(lead); enriched++; }
+    catch (e) { errors.push(`#${lead.id}: ${e.code || e.message}`); }
+  }
+  console.log(`[enrich-all] ${enriched}/${pending.length} enriched${errors.length ? ", " + errors.length + " failed" : ""}`);
+  res.json({ enriched, total: pending.length, errors });
 });
 
 // Export all leads as a CSV download (open in Excel / Google Sheets).

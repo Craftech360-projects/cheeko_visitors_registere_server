@@ -19,12 +19,14 @@
     <div class="metric"><b id="m-hot">0</b><span>🔴 Hot</span></div>
     <div class="metric"><b id="m-warm">0</b><span>🟡 Warm</span></div>
     <div class="metric"><b id="m-cold">0</b><span>🟢 Cold</span></div>
+    <div class="metric"><b id="m-enriched">0</b><span>✓ Enriched</span></div>
   </div>
 
   <div class="tools">
     <input id="search" placeholder="Search name / company / phone…">
     <select id="filter"><option value="">All</option><option value="hot">🔴 Hot</option><option value="warm">🟡 Warm</option><option value="cold">🟢 Cold</option></select>
     <a class="btn-primary" style="width:auto;margin-top:0;text-decoration:none" href="/export.csv">⬇ Export CSV</a>
+    <button class="btn-primary" style="width:auto;margin-top:0;background:#5F3DC4" onclick="enrichAll(this)">✨ Enrich all pending</button>
     <button class="btn-primary" style="width:auto;margin-top:0;background:#0B7A5E" onclick="syncAll(this)">☁️ Sync all to Supabase</button>
   </div>
 
@@ -70,6 +72,25 @@ async function enrich(id, btn) {
   }
 }
 
+async function enrichAll(btn) {
+  const label = btn.textContent; btn.textContent = "Enriching…"; btn.disabled = true;
+  try {
+    const r = await fetch("/api/enrich-all", { method: "POST" });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      toast(d.error === "ocr_not_configured" ? "Set GOOGLE_API_KEY in .env to enable OCR"
+        : "Enrich failed: " + (d.error || r.status), false);
+      return;
+    }
+    await load();
+    const failed = d.errors && d.errors.length;
+    toast(d.total === 0 ? "Nothing pending — all done"
+      : `Enriched ${d.enriched}/${d.total} pending` + (failed ? ` (${failed} failed — see logs)` : ""), !failed);
+  } finally {
+    btn.textContent = label; btn.disabled = false;
+  }
+}
+
 async function syncAll(btn) {
   const label = btn.textContent; btn.textContent = "Syncing…"; btn.disabled = true;
   try {
@@ -101,6 +122,7 @@ function render(){
   $("m-hot").textContent = leads.filter(l=>l.tag==="hot").length;
   $("m-warm").textContent = leads.filter(l=>l.tag==="warm").length;
   $("m-cold").textContent = leads.filter(l=>l.tag==="cold").length;
+  $("m-enriched").textContent = leads.filter(l=>l.enriched_at).length;
 
   const rows = leads.filter(l =>
     (!f || l.tag===f) &&
@@ -119,7 +141,7 @@ function render(){
         <div style="display:flex;gap:9px">
           ${thumb}
           <div>
-            <div class="co">${title}${tag}</div>
+            <div class="co">${title}${tag}${l.enriched_at ? ` <span class="tag cold">✓ enriched</span>` : (l.front_photo ? ` <span class="tag warm">pending</span>` : "")}</div>
             ${sub ? `<div class="ct">${sub}</div>` : ""}
             ${l.email ? `<div class="ct">✉️ ${esc(l.email)}</div>` : ""}
             ${l.website ? `<div class="ct">🌐 <a href="${/^https?:\/\//.test(l.website) ? esc(l.website) : "https://" + esc(l.website)}" target="_blank">${esc(l.website)}</a></div>` : ""}
@@ -127,7 +149,7 @@ function render(){
               <a class="btn bw" href="${waLink(l)}" target="_blank">💬 WhatsApp</a>
               ${l.email ? `<a class="btn be" href="mailto:${esc(l.email)}">✉️ Email</a>` : ""}
               <a class="btn bp" href="tel:+${l.wa_phone}">📞</a>
-              ${l.front_photo ? `<button class="btn be" onclick="enrich(${l.id},this)">✨ Enrich</button>` : ""}
+              ${l.front_photo ? `<button class="btn be" onclick="enrich(${l.id},this)">${l.enriched_at ? "↻ Re-enrich" : "✨ Enrich"}</button>` : ""}
             </div>
           </div>
         </div>
