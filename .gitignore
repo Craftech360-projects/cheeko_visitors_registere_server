@@ -7,3 +7,7 @@ backups/
 .claude/
 visitors.db-wal
 visitors.db-shm
+
+# personal test card images
+rahul.png
+rahulback.png
