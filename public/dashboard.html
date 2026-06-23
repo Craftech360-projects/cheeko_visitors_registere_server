@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leads Dashboard</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="page">
+  <div class="banner">
+    <h1>📋 Leads</h1>
+    <p><span id="count">0</span> captured · tap WA to follow up (needs internet)</p>
+  </div>
+
+  <div class="tools">
+    <input id="search" placeholder="Search name / company / phone…">
+    <select id="filter"><option value="">All</option><option value="hot">🔴 Hot</option><option value="warm">🟡 Warm</option><option value="cold">🟢 Cold</option></select>
+  </div>
+
+  <details style="margin-bottom:12px">
+    <summary style="cursor:pointer;font-size:13px;color:#3B5BDB">✏️ Edit WhatsApp message template</summary>
+    <textarea id="tpl" style="margin-top:8px"></textarea>
+    <p class="muted">Use <code>{name}</code> for the lead's name. </p>
+    <button class="btn" style="background:#eef;color:#3B5BDB;margin-top:6px" onclick="saveTpl()">Save template</button>
+  </details>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Card</th><th>Lead</th><th>Location</th><th>Products</th><th>WhatsApp</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let leads = [], template = "";
+
+function esc(s) { return (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function waLink(l) {
+  const msg = template.replace(/{name}/g, l.name || "there");
+  return `https://wa.me/${l.wa_phone}?text=${encodeURIComponent(msg)}`;
+}
+
+function render() {
+  const q = search.value.toLowerCase(), f = filter.value;
+  const rows = leads.filter(l =>
+    (!f || l.tag === f) &&
+    (!q || [l.name, l.company, l.phone].some(x => (x || "").toLowerCase().includes(q)))
+  );
+  count.textContent = leads.length;
+  document.getElementById("rows").innerHTML = rows.map(l => `
+    <tr>
+      <td>${l.front_photo ? `<a href="/${l.front_photo}" target="_blank"><img class="thumb" src="/${l.front_photo}"></a>` : "—"}</td>
+      <td><div class="co">${esc(l.name) || "(no name)"} ${l.tag ? `<span class="tag ${l.tag}">${l.tag}</span>` : ""}</div>
+          <div class="muted">${esc(l.company)}</div><div class="muted">${esc(l.phone)}</div></td>
+      <td class="muted">${esc(l.city)}</td>
+      <td class="muted">${esc(l.products)}${l.note ? `<div>📝 ${esc(l.note)}</div>` : ""}</td>
+      <td><a class="wa" href="${waLink(l)}" target="_blank">💬 WhatsApp</a></td>
+    </tr>`).join("");
+}
+
+async function saveTpl() {
+  template = tpl.value;
+  await fetch("/api/template", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ template }) });
+  render();
+}
+
+async function load() {
+  [leads, { template }] = await Promise.all([
+    fetch("/api/leads").then(r => r.json()),
+    fetch("/api/template").then(r => r.json()),
+  ]);
+  tpl.value = template;
+  render();
+}
+
+search.oninput = render; filter.onchange = render;
+load();
+setInterval(load, 15000); // keep dashboard fresh while phones add leads
+</script>
+</body>
+</html>

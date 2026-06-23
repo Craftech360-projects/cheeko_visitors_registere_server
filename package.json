@@ -1,0 +1,16 @@
+{
+  "name": "visitors-register",
+  "version": "1.0.0",
+  "description": "Offline event lead capture: phones -> LAN PC -> dashboard -> WhatsApp follow-up",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "express": "^4.21.0",
+    "qrcode": "^1.5.4"
+  }
+}

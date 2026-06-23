@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capture Lead</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="page">
+  <div class="banner">
+    <h1>➕ New Lead</h1>
+    <p>Snap the card, type the number, done. Only phone is required.</p>
+  </div>
+
+  <form id="f">
+    <label class="fld">Phone <span class="req">*</span></label>
+    <input id="phone" type="tel" inputmode="tel" required placeholder="98xxxxxxxx">
+
+    <div class="photos">
+      <label class="photobox">📷 Card front
+        <input type="file" accept="image/*" capture="environment" data-side="front">
+        <img hidden>
+      </label>
+      <label class="photobox">📷 Back (optional)
+        <input type="file" accept="image/*" capture="environment" data-side="back">
+        <img hidden>
+      </label>
+    </div>
+
+    <label class="fld">Name</label><input id="name">
+    <label class="fld">Company</label><input id="company">
+    <label class="fld">City</label><input id="city">
+    <label class="fld">Products / interest</label><input id="products">
+    <label class="fld">Priority</label>
+    <select id="tag"><option value="">—</option><option value="hot">🔴 Hot</option><option value="warm">🟡 Warm</option><option value="cold">🟢 Cold</option></select>
+    <label class="fld">Note</label><textarea id="note"></textarea>
+
+    <button class="btn primary" type="submit">Save lead</button>
+  </form>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const photos = { front: null, back: null };
+
+// Downscale to ~1280px JPEG in-browser before upload (small, OCR-ready in v2).
+function shrink(file, side, imgEl) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const max = 1280, scale = Math.min(1, max / img.width);
+      const c = document.createElement("canvas");
+      c.width = img.width * scale; c.height = img.height * scale;
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      photos[side] = c.toDataURL("image/jpeg", 0.7);
+      imgEl.src = photos[side]; imgEl.hidden = false;
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+document.querySelectorAll('input[type=file]').forEach(inp => {
+  inp.onchange = e => { if (e.target.files[0]) shrink(e.target.files[0], inp.dataset.side, inp.nextElementSibling); };
+});
+
+function toast(msg, ok = true) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.style.background = ok ? "#0B7A5E" : "#C92A2A";
+  t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+async function send(confirm) {
+  const body = {
+    phone: phone.value, name: name.value, company: company.value, city: city.value,
+    products: products.value, note: note.value, tag: tag.value,
+    frontPhoto: photos.front, backPhoto: photos.back, confirm,
+  };
+  const r = await fetch("/api/leads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (r.status === 409) {
+    if (confirm) return; // shouldn't happen
+    if (window.confirm("This number was already captured. Save anyway?")) return send(true);
+    return;
+  }
+  if (r.status === 400) return toast("Enter a valid phone number", false);
+  if (!r.ok) return toast("Save failed — try again", false);
+  document.getElementById("f").reset();
+  document.querySelectorAll('.photobox img').forEach(i => { i.hidden = true; i.src = ""; });
+  photos.front = photos.back = null;
+  phone.focus();
+  toast("Lead saved ✓");
+}
+
+document.getElementById("f").onsubmit = e => { e.preventDefault(); send(false); };
+</script>
+</body>
+</html>
