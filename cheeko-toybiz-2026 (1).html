@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cheeko @ Toy Biz 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f5f7;color:#1a1a2e;font-size:14px;line-height:1.5}
+a{color:#3B5BDB;text-decoration:none}
+.page{max-width:900px;margin:0 auto;padding:16px 12px 60px}
+
+/* BANNER */
+.banner{background:#fff;border:1px solid #dde;border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.banner h1{font-size:15px;font-weight:700;margin-bottom:4px}
+.banner p{font-size:12px;color:#6b7280}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.metric{background:#fff;border:1px solid #dde;border-radius:10px;padding:10px;text-align:center}
+.metric b{display:block;font-size:22px;font-weight:800}
+.metric span{font-size:10px;color:#6b7280}
+
+/* ── CSS-ONLY TABS ── */
+input[type=radio]{display:none}
+
+.tab-bar{display:flex;background:#fff;border:1px solid #dde;border-radius:10px;padding:3px;margin-bottom:14px;overflow-x:auto;gap:2px;-webkit-overflow-scrolling:touch}
+.tab-bar label{display:inline-block;padding:8px 12px;font-size:12px;font-weight:600;color:#6b7280;border-radius:8px;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.tab-bar label:hover{background:#f4f5f7;color:#1a1a2e}
+
+.panel{display:none}
+
+/* active states */
+#t1:checked ~ .tab-bar label[for=t1],
+#t2:checked ~ .tab-bar label[for=t2],
+#t3:checked ~ .tab-bar label[for=t3],
+#t4:checked ~ .tab-bar label[for=t4],
+#t5:checked ~ .tab-bar label[for=t5],
+#t6:checked ~ .tab-bar label[for=t6],
+#t7:checked ~ .tab-bar label[for=t7]{background:#3B5BDB;color:#fff}
+
+#t1:checked ~ .panels .p1{display:block}
+#t2:checked ~ .panels .p2{display:block}
+#t3:checked ~ .panels .p3{display:block}
+#t4:checked ~ .panels .p4{display:block}
+#t5:checked ~ .panels .p5{display:block}
+#t6:checked ~ .panels .p6{display:block}
+#t7:checked ~ .panels .p7{display:block}
+
+/* MEMBERS TABLE */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #dde;border-radius:12px}
+table{width:100%;border-collapse:collapse;background:#fff;min-width:600px}
+thead th{background:#f8f9fa;font-size:11px;font-weight:700;color:#6b7280;text-align:left;padding:9px 10px;border-bottom:1px solid #dde;white-space:nowrap}
+tbody tr{border-bottom:1px solid #f1f3f5}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#fafbff}
+td{padding:8px 10px;vertical-align:top}
+.co{font-weight:600;font-size:13px;color:#1a1a2e}
+.ct{font-size:11px;color:#6b7280;margin-top:2px}
+.pr{font-size:11px;color:#4b5563}
+.sp{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap}
+.sdl{background:#EEF4FF;color:#3B5BDB}.smh{background:#FFF0F6;color:#A61E4D}
+.sgj{background:#FFF4E6;color:#8E4B0A}.stn{background:#E6FCF5;color:#0B7A5E}
+.sup{background:#F3F0FF;color:#5F3DC4}.swb{background:#FFF9DB;color:#854D0E}
+.acts{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.btn{display:inline-block;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap}
+.bw{background:#DCFCE7;color:#15803D}.be{background:#EEF4FF;color:#3B5BDB}.bp{background:#F1F3F5;color:#374151}
+
+/* GENERAL CARDS */
+.sl{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin:16px 0 8px}
+.sl:first-child{margin-top:0}
+.card{background:#fff;border:1px solid #dde;border-radius:12px;padding:14px;margin-bottom:8px}
+.card.p1{border-left:4px solid #FA5252}.card.p2{border-left:4px solid #F59F00}.card.p3{border-left:4px solid #40C057}
+.card h3{font-size:14px;font-weight:700;margin-bottom:3px}
+.card .sub{font-size:11px;color:#6b7280;margin-bottom:6px}
+.card .ask{font-size:12px;color:#4b5563;line-height:1.6;padding-top:8px;border-top:1px solid #f1f3f5;margin-top:6px}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;margin-right:3px;margin-bottom:3px}
+.bc{background:#E6FCF5;color:#0B7A5E}.bd{background:#E7F5FF;color:#1864AB}
+.bm{background:#FFF4E6;color:#8E4B0A}.bb{background:#F3F0FF;color:#5F3DC4}.bn{background:#F1F3F5;color:#495057}
+.lrow{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.lnk{font-size:11px;font-weight:600;background:#EEF4FF;color:#3B5BDB;padding:3px 8px;border-radius:5px;display:inline-block}
+
+/* PEOPLE GRID */
+.pg2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.pcard{background:#fff;border:1px solid #dde;border-radius:12px;padding:13px}
+.pcard .pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-bottom:6px}
+.pcard h4{font-size:13px;font-weight:700}
+.pcard .role{font-size:11px;color:#6b7280}
+.pcard .co2{font-size:11px;font-weight:600;color:#3B5BDB;margin-bottom:7px}
+.pcard p{font-size:12px;color:#4b5563;line-height:1.5;margin-bottom:7px}
+
+/* TASKS */
+.tbox{background:#fff;border:1px solid #dde;border-radius:10px;margin-bottom:10px}
+.trow{display:flex;align-items:flex-start;gap:10px;padding:10px 13px;border-bottom:1px solid #f1f3f5}
+.trow:last-child{border-bottom:none}
+.trow label{display:flex;align-items:flex-start;gap:9px;cursor:pointer;width:100%}
+.trow input[type=checkbox]{margin-top:2px;width:16px;height:16px;flex-shrink:0;accent-color:#40C057}
+.tt{font-size:13px;font-weight:500}
+.tm{font-size:11px;color:#9ca3af;margin-top:2px}
+
+/* DAYS */
+.dc{background:#fff;border:1px solid #dde;border-radius:12px;padding:13px 15px;margin-bottom:8px}
+.dh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.db{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.db1{background:#E6FCF5;color:#0B7A5E}.db2{background:#E7F5FF;color:#1864AB}
+.db3{background:#FFF4E6;color:#8E4B0A}.db4{background:#F3F0FF;color:#5F3DC4}
+.dtitle{font-size:13px;font-weight:700}.dfocus{font-size:11px;color:#6b7280}
+.di{padding:6px 0;border-bottom:1px solid #f1f3f5;font-size:12px;color:#4b5563}
+.di:last-child{border-bottom:none}
+
+/* STALL */
+.sg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.si{background:#fff;border:1px solid #dde;border-radius:10px;padding:12px}
+.si.must{border-color:#40C057;border-width:2px}
+.si h4{font-size:13px;font-weight:700;margin-bottom:3px}
+.si p{font-size:12px;color:#6b7280;line-height:1.4}
+.skipbox{background:#fff;border:1px solid #dde;border-radius:10px;margin-bottom:10px}
+.srow{display:flex;align-items:center;gap:8px;padding:8px 13px;border-bottom:1px solid #f1f3f5;font-size:12px}
+.srow:last-child{border-bottom:none}
+.sr{margin-left:auto;font-size:11px;color:#9ca3af}
+
+/* OPENERS */
+.op{background:#fff;border-left:4px solid #3B5BDB;border-radius:0 10px 10px 0;padding:12px 14px;margin-bottom:8px}
+.op .lbl{font-size:11px;font-weight:700;color:#3B5BDB;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.op blockquote{font-size:13px;color:#374151;line-height:1.7;font-style:italic;background:#f8f9fa;border-radius:7px;padding:10px 12px}
+
+@media(max-width:560px){
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .pg2{grid-template-columns:1fr}
+  .sg{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- radio inputs MUST come before tab-bar and panels -->
+<input type="radio" name="tabs" id="t1" checked>
+<input type="radio" name="tabs" id="t2">
+<input type="radio" name="tabs" id="t3">
+<input type="radio" name="tabs" id="t4">
+<input type="radio" name="tabs" id="t5">
+<input type="radio" name="tabs" id="t6">
+<input type="radio" name="tabs" id="t7">
+
+<div class="banner">
+  <h1>🎪 17th Toy Biz International 2026 — Cheeko War Room</h1>
+  <p>📍 Bharat Mandapam, Pragati Maidan · New Delhi · July 4–7, 2026 · 10am–6pm daily<br>
+  Organised by Toy Association of India · <a href="https://tai-india.org">tai-india.org</a> · +91 9711409080</p>
+</div>
+
+<div class="metrics">
+  <div class="metric"><b>500</b><span>Exhibitors</span></div>
+  <div class="metric"><b>200K</b><span>Visitors</span></div>
+  <div class="metric"><b>40+</b><span>Countries</span></div>
+  <div class="metric"><b>4</b><span>Halls</span></div>
+</div>
+
+<div class="tab-bar">
+  <label for="t1">📋 Members</label>
+  <label for="t2">👥 Key people</label>
+  <label for="t3">🎯 Targets</label>
+  <label for="t4">✅ Checklist</label>
+  <label for="t5">📅 4-day plan</label>
+  <label for="t6">🏪 Stall</label>
+  <label for="t7">💬 Openers</label>
+</div>
+
+<div class="panels">
+
+<!-- ── P1: MEMBERS ── -->
+<div class="panel p1">
+  <p style="font-size:12px;color:#6b7280;margin-bottom:10px">120 TAI member companies from Delhi, Maharashtra, Gujarat, Tamil Nadu, UP and West Bengal. Tap WhatsApp or Email to contact directly.</p>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Company</th><th>State · City</th><th>Products</th><th>Contact</th></tr></thead>
+    <tbody>
+<!-- DELHI & NCR -->
+<tr><td><div class="co">3 Generations</div><div class="ct">Rajeev Kapur / Kashish Kapur</div><div class="acts"><a class="btn bw" href="https://wa.me/918383944924">💬 WA</a><a class="btn be" href="mailto:dineshsingh@3generations.in">✉️ Email</a><a class="btn bp" href="tel:+918383944924">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">Noida</span></td><td class="pr">Baby walkers, carriers, helmet, safety belt</td><td style="font-size:11px;color:#6b7280">8383944924</td></tr>
+<tr><td><div class="co">A &amp; K Sales Corp</div><div class="ct">V.K. Arora</div><div class="acts"><a class="btn bw" href="https://wa.me/919810324166">💬 WA</a><a class="btn bp" href="tel:+919810324166">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">Delhi</span></td><td class="pr">Toys, games, dolls</td><td style="font-size:11px;color:#6b7280">9810324166</td></tr>
+<tr><td><div class="co">A P Distributors Pvt Ltd</div><div class="ct">Subhash Aggarwal</div><div class="acts"><a class="btn bw" href="https://wa.me/919312221528">💬 WA</a><a class="btn be" href="mailto:apdistributorsdelhi@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919312221528">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">New Delhi</span></td><td class="pr">Toys &amp; games (distributor)</td><td style="font-size:11px;color:#6b7280">9312221528</td></tr>
+<tr><td><div class="co">A.R Creations</div><div class="ct">Sanjeev Chopra</div><div class="acts"><a class="btn bw" href="https://wa.me/919818649371">💬 WA</a><a class="btn be" href="mailto:arcreationsindia@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919818649371">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">Sonipat</span></td><td class="pr">Plastic toys, creative games, educational puzzles</td><td style="font-size:11px;color:#6b7280">9818649371</td></tr>
+<tr><td><div class="co">A.S. International</div><div class="ct">Ashish Srivastava</div><div class="acts"><a class="btn bw" href="https://wa.me/918178417410">💬 WA</a><a class="btn be" href="mailto:asintonline@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+918178417410">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">Noida</span></td><td class="pr">Soft toys and textile articles</td><td style="font-size:11px;color:#6b7280">8178417410</td></tr>
+<tr><td><div class="co">Aar Kay Trading Co</div><div class="ct">Ashok Kumar Chaufla</div><div class="acts"><a class="btn bw" href="https://wa.me/919313680156">💬 WA</a><a class="btn be" href="mailto:kapilchaufla@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919313680156">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">New Delhi</span></td><td class="pr">Mechanical, battery operated toys, indoor games, stuffed toys, dolls</td><td style="font-size:11px;color:#6b7280">9313680156</td></tr>
+<tr><td><div class="co">Aarti Playgroup Solution</div><div class="ct">Aarti</div><div class="acts"><a class="btn bw" href="https://wa.me/919818919186">💬 WA</a><a class="btn be" href="mailto:aartiplaygroupsolution@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919818919186">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">New Delhi</span></td><td class="pr">Playgroup solutions</td><td style="font-size:11px;color:#6b7280">9818919186</td></tr>
+<tr><td><div class="co">Aayam Retail</div><div class="ct">Sachin Gupta / Satish Gupta</div><div class="acts"><a class="btn bw" href="https://wa.me/919891188197">💬 WA</a><a class="btn be" href="mailto:info.aayamretail@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919891188197">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">New Delhi</span></td><td class="pr">Baby accessories, toys, children furniture</td><td style="font-size:11px;color:#6b7280">9891188197</td></tr>
+<tr><td><div class="co">Aayushi Polymers</div><div class="ct">Shahshank Gupta</div><div class="acts"><a class="btn bw" href="https://wa.me/919911168371">💬 WA</a><a class="btn be" href="mailto:aayushitoyz@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919911168371">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">Delhi</span></td><td class="pr">Toys and games, plastic toys, baby products</td><td style="font-size:11px;color:#6b7280">9911168371</td></tr>
+<tr><td><div class="co">ABC Toys Centre</div><div class="ct">Mohd. Haroon</div><div class="acts"><a class="btn bw" href="https://wa.me/919810278901">💬 WA</a><a class="btn bp" href="tel:+919810278901">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">Delhi</span></td><td class="pr">Dolls, PVC toys, mechanical toys, games</td><td style="font-size:11px;color:#6b7280">9810278901</td></tr>
+<tr><td><div class="co">Abhi Creations Pvt Ltd</div><div class="ct">Sunil Garg</div><div class="acts"><a class="btn bw" href="https://wa.me/919810044016">💬 WA</a><a class="btn be" href="mailto:network.sunil@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919810044016">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">New Delhi</span></td><td class="pr">Children playthings, educational toys, games</td><td style="font-size:11px;color:#6b7280">9810044016</td></tr>
+<tr><td><div class="co">Abhishek Traders</div><div class="ct">Rajesh Babbar</div><div class="acts"><a class="btn bw" href="https://wa.me/919810003821">💬 WA</a><a class="btn be" href="mailto:funjoy.toys@rocketmail.com">✉️ Email</a><a class="btn bp" href="tel:+919810003821">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">Delhi</span></td><td class="pr">PVC bags, accessories for stuffed toys &amp; dolls</td><td style="font-size:11px;color:#6b7280">9810003821</td></tr>
+<tr><td><div class="co">Adoraplay Private Limited</div><div class="ct">Vipin Nijhawan</div><div class="acts"><a class="btn bw" href="https://wa.me/919958552323">💬 WA</a><a class="btn be" href="mailto:vipin@jammbo.com">✉️ Email</a><a class="btn bp" href="tel:+919958552323">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">New Delhi</span></td><td class="pr">Ride-on and battery operated toys</td><td style="font-size:11px;color:#6b7280">9958552323</td></tr>
+<tr><td><div class="co">Advit Toys</div><div class="ct">Pratush Gupta</div><div class="acts"><a class="btn bw" href="https://wa.me/919999219948">💬 WA</a><a class="btn be" href="mailto:contact@advittoys.com">✉️ Email</a><a class="btn bp" href="tel:+919999219948">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">New Delhi</span></td><td class="pr">Board games and puzzles · <a href="https://advittoys.com">advittoys.com</a></td><td style="font-size:11px;color:#6b7280">9999219948</td></tr>
+<tr><td><div class="co">Agarwal Brothers Tradex</div><div class="ct">M.L. Gupta / Jalaj Gupta</div><div class="acts"><a class="btn bw" href="https://wa.me/919718352835">💬 WA</a><a class="btn be" href="mailto:abtpldelhi98@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919718352835">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">Delhi</span></td><td class="pr">All types of toys and games</td><td style="font-size:11px;color:#6b7280">9718352835</td></tr>
+<tr><td><div class="co">Aggarwal Enterprises</div><div class="ct">Manoj Aggarwal</div><div class="acts"><a class="btn bw" href="https://wa.me/919871099223">💬 WA</a><a class="btn be" href="mailto:toybazar@live.com">✉️ Email</a><a class="btn bp" href="tel:+919871099223">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">Delhi</span></td><td class="pr">Toys &amp; games (importer)</td><td style="font-size:11px;color:#6b7280">9871099223</td></tr>
+<tr><td><div class="co">Aggarwal Quilting Co (AQC)</div><div class="ct">Anil Kumar Aggarwal</div><div class="acts"><a class="btn bw" href="https://wa.me/919911835600">💬 WA</a><a class="btn be" href="mailto:support@aggarwalquilts.in">✉️ Email</a><a class="btn bp" href="tel:+919911835600">📞</a></div></td><td><span class="sp sdl">Delhi NCR</span><br><span style="font-size:11px;color:#6b7280">Noida</span></td><td class="pr">Baby kit, cushion, quilting pillow</td><td style="font-size:11px;color:#6b7280">9911835600</td></tr>
+<!-- MAHARASHTRA -->
+<tr><td><div class="co">A to Z Toys &amp; Gifts</div><div class="ct">Mohamed Amin Merchant</div><div class="acts"><a class="btn bw" href="https://wa.me/919987865254">💬 WA</a><a class="btn be" href="mailto:atoztoysandgifts@yahoo.com">✉️ Email</a><a class="btn bp" href="tel:+919987865254">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Mumbai</span></td><td class="pr">Plastic toys</td><td style="font-size:11px;color:#6b7280">9987865254</td></tr>
+<tr><td><div class="co">A.P. Products</div><div class="ct">Paramjeet Singh Nande</div><div class="acts"><a class="btn bw" href="https://wa.me/919892105785">💬 WA</a><a class="btn be" href="mailto:virgotoys@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919892105785">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Mumbai</span></td><td class="pr">Plastic moulded articles and toys</td><td style="font-size:11px;color:#6b7280">9892105785</td></tr>
+<tr><td><div class="co">ABK Corporation</div><div class="ct">Anil Babulal Kabra</div><div class="acts"><a class="btn bw" href="https://wa.me/919820101027">💬 WA</a><a class="btn be" href="mailto:abkcorporation@hotmail.com">✉️ Email</a><a class="btn bp" href="tel:+919820101027">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Mumbai</span></td><td class="pr">Creative, Funskool, Disney products &amp; imported toys</td><td style="font-size:11px;color:#6b7280">9820101027</td></tr>
+<tr><td><div class="co">Ajani Industries</div><div class="ct">Nanalal Ajani</div><div class="acts"><a class="btn bw" href="https://wa.me/919820036629">💬 WA</a><a class="btn be" href="mailto:ripulajani@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919820036629">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Mumbai</span></td><td class="pr">Bicycles, tricycles, walkers, prams, jhulas, study desks</td><td style="font-size:11px;color:#6b7280">9820036629</td></tr>
+<tr><td><div class="co">Anmol Toys Pvt Ltd</div><div class="ct">Deepak N. Dhimar</div><div class="acts"><a class="btn bw" href="https://wa.me/919820191098">💬 WA</a><a class="btn be" href="mailto:anmoltoys@rediffmail.com">✉️ Email</a><a class="btn bp" href="tel:+919820191098">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Mumbai</span></td><td class="pr">Toy games &amp; indoor games</td><td style="font-size:11px;color:#6b7280">9820191098</td></tr>
+<tr><td><div class="co">Aradhana Traders</div><div class="ct">Mayur A. Nagodra</div><div class="acts"><a class="btn bw" href="https://wa.me/919821121598">💬 WA</a><a class="btn be" href="mailto:aradhana@aradhanaindia.com">✉️ Email</a><a class="btn bp" href="tel:+919821121598">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Mumbai</span></td><td class="pr">Traditional handicraft collectible dolls</td><td style="font-size:11px;color:#6b7280">9821121598</td></tr>
+<tr><td><div class="co">Avis Creation</div><div class="ct">Ravi Sheshrao Umap</div><div class="acts"><a class="btn bw" href="https://wa.me/919869042178">💬 WA</a><a class="btn be" href="mailto:aviscreation@in.com">✉️ Email</a><a class="btn bp" href="tel:+919869042178">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Mumbai</span></td><td class="pr">Educational toys</td><td style="font-size:11px;color:#6b7280">9869042178</td></tr>
+<tr><td><div class="co">B.K. Enterprises</div><div class="ct">Basant Jain</div><div class="acts"><a class="btn bw" href="https://wa.me/919822018105">💬 WA</a><a class="btn be" href="mailto:basant9may@yahoo.co.in">✉️ Email</a><a class="btn bp" href="tel:+919822018105">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Pune</span></td><td class="pr">Toys &amp; novelties</td><td style="font-size:11px;color:#6b7280">9822018105</td></tr>
+<tr><td><div class="co">Bears</div><div class="ct">Laksh Narang</div><div class="acts"><a class="btn bw" href="https://wa.me/919811663082">💬 WA</a><a class="btn be" href="mailto:bears.co.in@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919811663082">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Bhiwandi</span></td><td class="pr">Plush toys, soft toys, stuffed toys, dolls</td><td style="font-size:11px;color:#6b7280">9811663082</td></tr>
+<tr><td><div class="co">Clever Cubes</div><div class="ct">Leena Shah</div><div class="acts"><a class="btn bw" href="https://wa.me/919821077192">💬 WA</a><a class="btn be" href="mailto:clevercubes@yahoo.co.in">✉️ Email</a><a class="btn bp" href="tel:+919821077192">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Mumbai</span></td><td class="pr">Educational games</td><td style="font-size:11px;color:#6b7280">9821077192</td></tr>
+<tr><td><div class="co">Creata Impex</div><div class="ct">Sneha Vikas Gujalwar</div><div class="acts"><a class="btn bw" href="https://wa.me/918888222224">💬 WA</a><a class="btn be" href="mailto:impex@creatagroup.com">✉️ Email</a><a class="btn bp" href="tel:+918888222224">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Nagpur</span></td><td class="pr">Bamboo toys &amp; brain games</td><td style="font-size:11px;color:#6b7280">8888222224</td></tr>
+<tr><td><div class="co">Darshan Toys</div><div class="ct">Uttam Kumar Jain</div><div class="acts"><a class="btn bw" href="https://wa.me/919820633057">💬 WA</a><a class="btn be" href="mailto:darshantoys@yahoo.com">✉️ Email</a><a class="btn bp" href="tel:+919820633057">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Mumbai</span></td><td class="pr">Educational toys &amp; games, puzzles</td><td style="font-size:11px;color:#6b7280">9820633057</td></tr>
+<tr><td><div class="co">Desi Creative LLP</div><div class="ct">Neeraj Dadlani</div><div class="acts"><a class="btn bw" href="https://wa.me/917200626024">💬 WA</a><a class="btn be" href="mailto:neeraj.dadlani@desicreativegroup.in">✉️ Email</a><a class="btn bp" href="tel:+917200626024">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Pune</span></td><td class="pr">Vinyl toys, story books, comic books · <a href="https://desicreativegroup.in">website</a></td><td style="font-size:11px;color:#6b7280">7200626024</td></tr>
+<tr><td><div class="co">Dream Plast India Pvt Ltd</div><div class="ct">Nitin Gupta</div><div class="acts"><a class="btn bw" href="https://wa.me/919823168325">💬 WA</a><a class="btn be" href="mailto:admin@dreamplast.com">✉️ Email</a><a class="btn bp" href="tel:+919823168325">📞</a></div></td><td><span class="sp smh">Maharashtra</span><br><span style="font-size:11px;color:#6b7280">Pune</span></td><td class="pr">Toys, dolls, blocks · <a href="https://dreamplast.com">dreamplast.com</a></td><td style="font-size:11px;color:#6b7280">9823168325</td></tr>
+<!-- GUJARAT -->
+<tr><td><div class="co">Aditi Toys Pvt Ltd</div><div class="ct">Subhash Zala</div><div class="acts"><a class="btn bw" href="https://wa.me/919016933333">💬 WA</a><a class="btn be" href="mailto:subhashzala333@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919016933333">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Rajkot</span></td><td class="pr">All types of toys &amp; games, board games, promotional toys</td><td style="font-size:11px;color:#6b7280">9016933333</td></tr>
+<tr><td><div class="co">Archati Future</div><div class="ct">Bhargav J Patel</div><div class="acts"><a class="btn bw" href="https://wa.me/918490938446">💬 WA</a><a class="btn be" href="mailto:archatifuture@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+918490938446">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Ahmedabad</span></td><td class="pr">Wooden toys, educational toys, DIY kits</td><td style="font-size:11px;color:#6b7280">8490938446</td></tr>
+<tr><td><div class="co">Baabus Baby Care Products</div><div class="ct">Tanti Lalit M</div><div class="acts"><a class="btn bw" href="https://wa.me/917984433440">💬 WA</a><a class="btn be" href="mailto:baabusbabycare@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+917984433440">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Rajkot</span></td><td class="pr">Swing cars, strollers, kick scooters, tricycles, walkers</td><td style="font-size:11px;color:#6b7280">7984433440</td></tr>
+<tr><td><div class="co">Balaji Plastic Toys Industries</div><div class="ct">Gopal Bhuraji Prajapati</div><div class="acts"><a class="btn bw" href="https://wa.me/919840289365">💬 WA</a><a class="btn be" href="mailto:balajitoysindustries@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919840289365">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Ahmedabad</span></td><td class="pr">Blocks set, fruits set, vegetable set, ring set</td><td style="font-size:11px;color:#6b7280">9840289365</td></tr>
+<tr><td><div class="co">Balson Toys LLP</div><div class="ct">Nimeshbhai Atkotiya</div><div class="acts"><a class="btn bw" href="https://wa.me/919099969869">💬 WA</a><a class="btn be" href="mailto:balsontoys@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919099969869">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Rajkot</span></td><td class="pr">Toys, baby products</td><td style="font-size:11px;color:#6b7280">9099969869</td></tr>
+<tr><td><div class="co">Clay Kids</div><div class="ct">Paresh K. Joshi</div><div class="acts"><a class="btn bw" href="https://wa.me/919825599331">💬 WA</a><a class="btn bp" href="tel:+919825599331">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Ahmedabad</span></td><td class="pr">Modelling clay &amp; dough fun &amp; games</td><td style="font-size:11px;color:#6b7280">9825599331</td></tr>
+<tr><td><div class="co">Dhanesh Agencies</div><div class="ct">S.P. Mittal</div><div class="acts"><a class="btn bw" href="https://wa.me/919825036247">💬 WA</a><a class="btn be" href="mailto:dhaneshagencies@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919825036247">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Ahmedabad</span></td><td class="pr">OK Play Vardhman, wooden &amp; plastic toys, games, puzzles</td><td style="font-size:11px;color:#6b7280">9825036247</td></tr>
+<tr><td><div class="co">DreamCreate Playworks LLP</div><div class="ct">Krishna Gunjaria</div><div class="acts"><a class="btn bw" href="https://wa.me/919843416036">💬 WA</a><a class="btn be" href="mailto:dreamcreateoffice@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919843416036">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Rajkot</span></td><td class="pr">Wooden toys, board games, flash cards</td><td style="font-size:11px;color:#6b7280">9843416036</td></tr>
+<tr><td><div class="co">Fundoolabs Creative Learning</div><div class="ct">Naitik Chotai</div><div class="acts"><a class="btn bw" href="https://wa.me/919099059439">💬 WA</a><a class="btn be" href="mailto:naitik@fundoolabs.in">✉️ Email</a><a class="btn bp" href="tel:+919099059439">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Vadodara</span></td><td class="pr">DIY scientific and educational kits/toys · <a href="https://fundoolabs.in">fundoolabs.in</a></td><td style="font-size:11px;color:#6b7280">9099059439</td></tr>
+<tr><td><div class="co">Gautam Trading Co</div><div class="ct">Nayan Doshi</div><div class="acts"><a class="btn bw" href="https://wa.me/919428038326">💬 WA</a><a class="btn be" href="mailto:gautamtraco@rediffmail.com">✉️ Email</a><a class="btn bp" href="tel:+919428038326">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Rajkot</span></td><td class="pr">Toys, games, soft toys, sports, baby products</td><td style="font-size:11px;color:#6b7280">9428038326</td></tr>
+<tr><td><div class="co">Happy Hands Global LLP</div><div class="ct">Prerak Hitesh Shah</div><div class="acts"><a class="btn bw" href="https://wa.me/919825018106">💬 WA</a><a class="btn be" href="mailto:connect@happy-hands.co.in">✉️ Email</a><a class="btn bp" href="tel:+919825018106">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Ahmedabad</span></td><td class="pr">Educational board games, art and craft kits · <a href="https://happy-hands.co.in">website</a></td><td style="font-size:11px;color:#6b7280">9825018106</td></tr>
+<tr><td><div class="co">JBT Plastic</div><div class="ct">Milan V. Sherasiya</div><div class="acts"><a class="btn bw" href="https://wa.me/919714937777">💬 WA</a><a class="btn be" href="mailto:jbtplastic77@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919714937777">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Morbi</span></td><td class="pr">Friction toys, building block toys, kids sport equipment</td><td style="font-size:11px;color:#6b7280">9714937777</td></tr>
+<tr><td><div class="co">Jumboo Toys and Crafts LLP</div><div class="ct">Subhashish Sen</div><div class="acts"><a class="btn bw" href="https://wa.me/919825027042">💬 WA</a><a class="btn be" href="mailto:contact@jumboo.in">✉️ Email</a><a class="btn bp" href="tel:+919825027042">📞</a></div></td><td><span class="sp sgj">Gujarat</span><br><span style="font-size:11px;color:#6b7280">Ahmedabad</span></td><td class="pr">All kinds of toys · <a href="https://jumboo.in">jumboo.in</a></td><td style="font-size:11px;color:#6b7280">9825027042</td></tr>
+<!-- TAMIL NADU -->
+<tr><td><div class="co">Bafna Toys</div><div class="ct">Hardik Bafna</div><div class="acts"><a class="btn bw" href="https://wa.me/919043347300">💬 WA</a><a class="btn be" href="mailto:bafnatoys@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919043347300">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Coimbatore</span></td><td class="pr">Dolls, squeeze toys</td><td style="font-size:11px;color:#6b7280">9043347300</td></tr>
+<tr><td><div class="co">Bharani Wood Works</div><div class="ct">Lokesh K</div><div class="acts"><a class="btn bw" href="https://wa.me/919442743555">💬 WA</a><a class="btn be" href="mailto:bharaniwoodworks@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919442743555">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Walajapet</span></td><td class="pr">Wooden toys</td><td style="font-size:11px;color:#6b7280">9442743555</td></tr>
+<tr><td><div class="co">Bright Imports</div><div class="ct">A Mohamed Ammerudeen</div><div class="acts"><a class="btn bw" href="https://wa.me/916369799045">💬 WA</a><a class="btn be" href="mailto:brightimports20@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+916369799045">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Chennai</span></td><td class="pr">Ride-on cars, bikes, baby chairs</td><td style="font-size:11px;color:#6b7280">6369799045</td></tr>
+<tr><td><div class="co">Chhota Bhai Retailing India</div><div class="ct">Nirav Patel</div><div class="acts"><a class="btn bw" href="https://wa.me/919840036063">💬 WA</a><a class="btn be" href="mailto:chhotabhai@eth.net">✉️ Email</a><a class="btn bp" href="tel:+919840036063">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Chennai</span></td><td class="pr">All types of toys &amp; games</td><td style="font-size:11px;color:#6b7280">9840036063</td></tr>
+<tr><td><div class="co">Emerald Sales Corporation</div><div class="ct">K.R. Jai Shankar</div><div class="acts"><a class="btn bw" href="https://wa.me/919003222229">💬 WA</a><a class="btn be" href="mailto:emeraldtoys@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919003222229">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Chennai</span></td><td class="pr">Toys and games</td><td style="font-size:11px;color:#6b7280">9003222229</td></tr>
+<tr><td><div class="co">Funskool (India) Ltd</div><div class="ct">R. Jeswant</div><div class="acts"><a class="btn bw" href="https://wa.me/919444028520">💬 WA</a><a class="btn be" href="mailto:jeswant@funskool.co.in">✉️ Email</a><a class="btn bp" href="tel:+919444028520">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Chennai</span></td><td class="pr">Toys, dolls, board games, puzzles · <a href="https://funskoolindia.com">funskoolindia.com</a></td><td style="font-size:11px;color:#6b7280">9444028520</td></tr>
+<tr><td><div class="co">K&amp;M Toys India Pvt Ltd</div><div class="ct">K.S. Prakash</div><div class="acts"><a class="btn bw" href="https://wa.me/918939939330">💬 WA</a><a class="btn be" href="mailto:prakash@wildrepublic.com">✉️ Email</a><a class="btn bp" href="tel:+918939939330">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Chennai</span></td><td class="pr">Wild Republic toys</td><td style="font-size:11px;color:#6b7280">8939939330</td></tr>
+<tr><td><div class="co">Kidss Talk Pvt Ltd</div><div class="ct">Nikunj Das Binani</div><div class="acts"><a class="btn bw" href="https://wa.me/919345220452">💬 WA</a><a class="btn be" href="mailto:nikunjbinani@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919345220452">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Madurai</span></td><td class="pr">All kinds of toys</td><td style="font-size:11px;color:#6b7280">9345220452</td></tr>
+<tr><td><div class="co">Master Page / Kreeda Games</div><div class="ct">Vinita Sidhartha</div><div class="acts"><a class="btn bw" href="https://wa.me/919841027966">💬 WA</a><a class="btn be" href="mailto:info@kreedagames.com">✉️ Email</a><a class="btn bp" href="tel:+919841027966">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Chennai</span></td><td class="pr">Traditional board games, outdoor games · <a href="https://kreedagames.com">kreedagames.com</a></td><td style="font-size:11px;color:#6b7280">9841027966</td></tr>
+<tr><td><div class="co">Prime Toys India Pvt Ltd</div><div class="ct">Ibrahim / Shamsuddeen</div><div class="acts"><a class="btn bw" href="https://wa.me/919444037330">💬 WA</a><a class="btn be" href="mailto:admin@primetoys.in">✉️ Email</a><a class="btn bp" href="tel:+919444037330">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Chennai</span></td><td class="pr">Tricycles, pedal cars, ride-ons, battery cars · <a href="https://primetoys.in">primetoys.in</a></td><td style="font-size:11px;color:#6b7280">9444037330</td></tr>
+<tr><td><div class="co">Veva Toys Global Pvt Ltd</div><div class="ct">Vishal Nahar</div><div class="acts"><a class="btn bw" href="https://wa.me/919841574901">💬 WA</a><a class="btn be" href="mailto:vishal.nahar@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919841574901">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Chennai</span></td><td class="pr">Toys</td><td style="font-size:11px;color:#6b7280">9841574901</td></tr>
+<tr><td><div class="co">Navrang Novelty</div><div class="ct">Jog Singh Rajpurohit</div><div class="acts"><a class="btn bw" href="https://wa.me/919443155331">💬 WA</a><a class="btn be" href="mailto:navarangmdu@yahoo.com">✉️ Email</a><a class="btn bp" href="tel:+919443155331">📞</a></div></td><td><span class="sp stn">Tamil Nadu</span><br><span style="font-size:11px;color:#6b7280">Madurai</span></td><td class="pr">Toys, umbrellas, gift articles</td><td style="font-size:11px;color:#6b7280">9443155331</td></tr>
+<!-- UTTAR PRADESH -->
+<tr><td><div class="co">A.K. Enterprises</div><div class="ct">Hemant Kumar</div><div class="acts"><a class="btn bw" href="https://wa.me/918010733726">💬 WA</a><a class="btn bp" href="tel:+918010733726">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Ghaziabad</span></td><td class="pr">Baby tricycles, riders, magic cars, fiber cricket bats</td><td style="font-size:11px;color:#6b7280">8010733726</td></tr>
+<tr><td><div class="co">B B Traders</div><div class="ct">Mukesh K Bhatia</div><div class="acts"><a class="btn bw" href="https://wa.me/919837357539">💬 WA</a><a class="btn be" href="mailto:mukeshbhatia1962@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919837357539">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Bareilly</span></td><td class="pr">Toys &amp; gifts</td><td style="font-size:11px;color:#6b7280">9837357539</td></tr>
+<tr><td><div class="co">Baby Blessing</div><div class="ct">Amanpreet Kaur Chhabra</div><div class="acts"><a class="btn bw" href="https://wa.me/919350104512">💬 WA</a><a class="btn be" href="mailto:babyblessing2024@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919350104512">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Ghaziabad</span></td><td class="pr">Baby rides, toys, nursery furniture</td><td style="font-size:11px;color:#6b7280">9350104512</td></tr>
+<tr><td><div class="co">Bansal Books and Stationers</div><div class="ct">Akshay Bansal</div><div class="acts"><a class="btn bw" href="https://wa.me/919837262003">💬 WA</a><a class="btn be" href="mailto:info.bansalbooks@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919837262003">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Meerut</span></td><td class="pr">Board games, stationery, toys, baby products</td><td style="font-size:11px;color:#6b7280">9837262003</td></tr>
+<tr><td><div class="co">Blue Bells Toys &amp; Handicrafts</div><div class="ct">Khalid Johar</div><div class="acts"><a class="btn bw" href="https://wa.me/919219715160">💬 WA</a><a class="btn be" href="mailto:khalidimpex.ki@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919219715160">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Saharanpur</span></td><td class="pr">Toys &amp; handicrafts</td><td style="font-size:11px;color:#6b7280">9219715160</td></tr>
+<tr><td><div class="co">Craftopedia Private Limited</div><div class="ct">Sachi Gupta / Ankur Gupta</div><div class="acts"><a class="btn bw" href="https://wa.me/919927049808">💬 WA</a><a class="btn be" href="mailto:ccraftopedia@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919927049808">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Saharanpur</span></td><td class="pr">Crafts &amp; toys</td><td style="font-size:11px;color:#6b7280">9927049808</td></tr>
+<tr><td><div class="co">Fun Treasure</div><div class="ct">Adiba</div><div class="acts"><a class="btn bw" href="https://wa.me/919667005682">💬 WA</a><a class="btn be" href="mailto:funtreasurenoida@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919667005682">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Noida</span></td><td class="pr">Toys</td><td style="font-size:11px;color:#6b7280">9667005682</td></tr>
+<tr><td><div class="co">GMS Speechgears Pvt Ltd</div><div class="ct">Bharat Bhushan Chandra</div><div class="acts"><a class="btn bw" href="https://wa.me/919650993254">💬 WA</a><a class="btn be" href="mailto:bharatbchandra@speechgears.com">✉️ Email</a><a class="btn bp" href="tel:+919650993254">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Noida</span></td><td class="pr">Educational toys, board games, puzzles · <a href="https://speechgears.com">speechgears.com</a></td><td style="font-size:11px;color:#6b7280">9650993254</td></tr>
+<tr><td><div class="co">Guru Sudershan Enterprises</div><div class="ct">Gaurav Jain</div><div class="acts"><a class="btn bw" href="https://wa.me/919971202300">💬 WA</a><a class="btn be" href="mailto:gauravjain0121@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919971202300">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Ghaziabad</span></td><td class="pr">Baby tricycles, walkers, ride-ons, battery bikes</td><td style="font-size:11px;color:#6b7280">9971202300</td></tr>
+<tr><td><div class="co">Jain Trendz</div><div class="ct">Mani Kamal Jain</div><div class="acts"><a class="btn bw" href="https://wa.me/918920953985">💬 WA</a><a class="btn be" href="mailto:manikamaljain@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+918920953985">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Ghaziabad</span></td><td class="pr">Cradles, walkers, ride-ons</td><td style="font-size:11px;color:#6b7280">8920953985</td></tr>
+<tr><td><div class="co">JoyCrate (Jaska Ventures)</div><div class="ct">Aarushi Arya / Kamlesh Arya</div><div class="acts"><a class="btn bw" href="https://wa.me/919663585019">💬 WA</a><a class="btn be" href="mailto:aarushi@joycrate.in">✉️ Email</a><a class="btn bp" href="tel:+919663585019">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Noida</span></td><td class="pr">Wooden toys, fabric toys, Montessori toys · <a href="https://joycrate.in">joycrate.in</a></td><td style="font-size:11px;color:#6b7280">9663585019</td></tr>
+<tr><td><div class="co">Jeen Sports</div><div class="ct">B L Agarwal</div><div class="acts"><a class="btn bw" href="https://wa.me/919415328250">💬 WA</a><a class="btn be" href="mailto:jeensports11@yahoo.in">✉️ Email</a><a class="btn bp" href="tel:+919415328250">📞</a></div></td><td><span class="sp sup">Uttar Pradesh</span><br><span style="font-size:11px;color:#6b7280">Lucknow</span></td><td class="pr">Sports, toys, play school items, ride-ons</td><td style="font-size:11px;color:#6b7280">9415328250</td></tr>
+<!-- WEST BENGAL -->
+<tr><td><div class="co">ASR Toys LLP</div><div class="ct">Arihant Chhajer / Rohit Saraf</div><div class="acts"><a class="btn bw" href="https://wa.me/919748579353">💬 WA</a><a class="btn be" href="mailto:asrtoys@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919748579353">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Toys</td><td style="font-size:11px;color:#6b7280">9748579353</td></tr>
+<tr><td><div class="co">Dr. Mady's Innovation Pvt Ltd</div><div class="ct">Manisha Gupta / Nilanjana Gupta</div><div class="acts"><a class="btn bw" href="https://wa.me/919830033906">💬 WA</a><a class="btn be" href="mailto:madysinnovation@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919830033906">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Educational toys, science kits, telescope, microscope, puzzles</td><td style="font-size:11px;color:#6b7280">9830033906</td></tr>
+<tr><td><div class="co">H V Doshi Agencies</div><div class="ct">Anil Joshi</div><div class="acts"><a class="btn bw" href="https://wa.me/919830941124">💬 WA</a><a class="btn be" href="mailto:hvdoshiagencies@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919830941124">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Toys, games, gift items</td><td style="font-size:11px;color:#6b7280">9830941124</td></tr>
+<tr><td><div class="co">Matrix Educare Pvt Ltd</div><div class="ct">Manisha Gupta</div><div class="acts"><a class="btn bw" href="https://wa.me/919830033906">💬 WA</a><a class="btn be" href="mailto:matrixeducare2@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919830033906">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Science experiment kits, maths puzzles and toys</td><td style="font-size:11px;color:#6b7280">9830033906</td></tr>
+<tr><td><div class="co">N.K. International</div><div class="ct">M M Mundhra / Chanchal Mundhra</div><div class="acts"><a class="btn bw" href="https://wa.me/919903825120">💬 WA</a><a class="btn be" href="mailto:nkinternational2007@yahoo.co.in">✉️ Email</a><a class="btn bp" href="tel:+919903825120">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Toy, games &amp; novelties</td><td style="font-size:11px;color:#6b7280">9903825120</td></tr>
+<tr><td><div class="co">Papami Toytronix Pvt Ltd</div><div class="ct">Mohit Shah</div><div class="acts"><a class="btn bw" href="https://wa.me/919830059360">💬 WA</a><a class="btn be" href="mailto:info@papamitoys.com">✉️ Email</a><a class="btn bp" href="tel:+919830059360">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Electronic and non-electronic toys · <a href="https://papamitoys.com">papamitoys.com</a></td><td style="font-size:11px;color:#6b7280">9830059360</td></tr>
+<tr><td><div class="co">Premium Toy</div><div class="ct">Shabaz Khan</div><div class="acts"><a class="btn bw" href="https://wa.me/918420103260">💬 WA</a><a class="btn be" href="mailto:shabaz@premiumtoys.in">✉️ Email</a><a class="btn bp" href="tel:+918420103260">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Friction toy, kitchen utility toy set · <a href="https://premiumtoys.in">premiumtoys.in</a></td><td style="font-size:11px;color:#6b7280">8420103260</td></tr>
+<tr><td><div class="co">Sanjay Toys</div><div class="ct">Sanjeev Jain</div><div class="acts"><a class="btn bw" href="https://wa.me/919831409944">💬 WA</a><a class="btn be" href="mailto:sanjay_toys@yahoo.com">✉️ Email</a><a class="btn bp" href="tel:+919831409944">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Funskool, OkPlay, soft toys distributor</td><td style="font-size:11px;color:#6b7280">9831409944</td></tr>
+<tr><td><div class="co">Shanti International</div><div class="ct">Rajendra Kumar Sureka / Vishal Sureka</div><div class="acts"><a class="btn bw" href="https://wa.me/919830123697">💬 WA</a><a class="btn be" href="mailto:vishal_sureka@hotmail.com">✉️ Email</a><a class="btn bp" href="tel:+919830123697">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Toys, housewares</td><td style="font-size:11px;color:#6b7280">9830123697</td></tr>
+<tr><td><div class="co">Shree Creations</div><div class="ct">Jyoti Mundhra</div><div class="acts"><a class="btn bw" href="https://wa.me/919748074465">💬 WA</a><a class="btn be" href="mailto:shreecreationkolkata@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919748074465">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Educational toys</td><td style="font-size:11px;color:#6b7280">9748074465</td></tr>
+<tr><td><div class="co">Think Wittsy LLP</div><div class="ct">Shraddha Fogla / Rishi Fogla</div><div class="acts"><a class="btn bw" href="https://wa.me/919830024922">💬 WA</a><a class="btn be" href="mailto:marianne@thinkwittsy.com">✉️ Email</a><a class="btn bp" href="tel:+919830024922">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Interactive &amp; sensory puzzles, activity kits, board games · <a href="https://thinkwittsy.com">thinkwittsy.com</a></td><td style="font-size:11px;color:#6b7280">9830024922</td></tr>
+<tr><td><div class="co">Toy House Marketing Pvt Ltd</div><div class="ct">Abhishek Agarwal / Babulal Agarwal</div><div class="acts"><a class="btn bw" href="https://wa.me/919830091919">💬 WA</a><a class="btn be" href="mailto:bla2411@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919830091919">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Toys, games and allied products</td><td style="font-size:11px;color:#6b7280">9830091919</td></tr>
+<tr><td><div class="co">Vikash Toy Centre</div><div class="ct">Sampat Jain</div><div class="acts"><a class="btn bw" href="https://wa.me/919831224021">💬 WA</a><a class="btn be" href="mailto:vikashtoy@gmail.com">✉️ Email</a><a class="btn bp" href="tel:+919831224021">📞</a></div></td><td><span class="sp swb">West Bengal</span><br><span style="font-size:11px;color:#6b7280">Kolkata</span></td><td class="pr">Toys, games</td><td style="font-size:11px;color:#6b7280">9831224021</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- ── P2: KEY PEOPLE ── -->
+<div class="panel p2">
+  <div class="sl">Content partners</div>
+  <div class="pg2">
+    <div class="pcard"><div class="pill cc" style="background:#E6FCF5;color:#0B7A5E">Content</div><h4>Krishnaprasad Jagadish</h4><div class="role">Co-Founder</div><div class="co2">Katha Room</div><p>Indian audio stories in 5 languages, screen-free. Apple Design Awards 2026 Finalist. 250+ stories ages 3–7. Cheeko's closest content partner.</p><div class="lrow"><a class="lnk" href="https://katharoom.com">🌐 katharoom.com</a></div></div>
+    <div class="pcard"><div class="pill" style="background:#FFF0F6;color:#A61E4D">Content</div><h4>Aman Srivastava</h4><div class="role">CEO</div><div class="co2">Amar Chitra Katha</div><p>Ex-Sony LIV. Driving ACK digital &amp; licensing expansion. India's most iconic children's IP since 1967. Contact Deepesh Kothari (VP Digital) for licensing.</p><div class="lrow"><a class="lnk" href="https://amarchitrakatha.com">🌐 amarchitrakatha.com</a></div></div>
+    <div class="pcard"><div class="pill" style="background:#E6FCF5;color:#0B7A5E">Content</div><h4>R. Sriram</h4><div class="role">Chairperson</div><div class="co2">Pratham Books / StoryWeaver</div><p>38,000+ books in 300 languages, CC licensed. Wants hardware to reach pre-reading children 2–5. Many stories free to use.</p><div class="lrow"><a class="lnk" href="https://prathambooks.org">🌐 prathambooks.org</a><a class="lnk" href="mailto:partnerships@storyweaver.org.in">✉️ partnerships</a></div></div>
+    <div class="pcard"><div class="pill" style="background:#FFF4E6;color:#8E4B0A">Content</div><h4>Vijay Govil</h4><div class="role">Director</div><div class="co2">Frank Educational Aids</div><p>India's oldest edu-toy brand, est. 1971. $23M revenue. Deep school B2B network. Content licensing + school distribution in one meeting.</p><div class="lrow"><a class="lnk" href="https://frankedu.com">🌐 frankedu.com</a><a class="lnk" href="mailto:info@frankedu.com">✉️ email</a></div></div>
+  </div>
+  <div class="sl">Distribution &amp; manufacturing</div>
+  <div class="pg2">
+    <div class="pcard"><div class="pill" style="background:#F3F0FF;color:#5F3DC4">Co-brand</div><h4>Ashwini Kumar</h4><div class="role">CEO &amp; Co-Founder</div><div class="co2">Smartivity Labs</div><p>India's #1 STEAM toy brand. First Indian Toy of the Year 2025. Delhi-based. Zero AI/voice layer — Cheeko fills that gap. Top partnership target.</p><div class="lrow"><a class="lnk" href="https://smartivity.in">🌐 smartivity.in</a><a class="lnk" href="mailto:info@smartivity.in">✉️ email</a></div></div>
+    <div class="pcard"><div class="pill" style="background:#FFF4E6;color:#8E4B0A">Mfg</div><h4>Devansh Sharma</h4><div class="role">CEO &amp; Co-Founder</div><div class="co2">Mirana Toys</div><p>IIT Bombay. ₹57.5 Cr Series A Nov 2025. AI robots, AR cars in 3,000+ stores. New factory. Actively deploying capital — find him early.</p><div class="lrow"><a class="lnk" href="https://miranatoys.com">🌐 miranatoys.com</a></div></div>
+    <div class="pcard"><div class="pill" style="background:#E7F5FF;color:#1864AB">Distrib</div><h4>K A Shabir</h4><div class="role">CEO (since Jan 2025)</div><div class="co2">Funskool India</div><p>33+ yrs at Funskool, now CEO. India's #1 toy company by retail reach (MRF Group). Distributes Hasbro, Disney, Ravensburger. Funskool shelf = national reach overnight.</p><div class="lrow"><a class="lnk" href="https://funskoolindia.com">🌐 funskoolindia.com</a></div></div>
+    <div class="pcard"><div class="pill" style="background:#F1F3F5;color:#495057">Organiser</div><h4>TAI Leadership</h4><div class="role">Organiser desk — Day 1 first stop</div><div class="co2">Toy Association of India</div><p>5,000+ members. One intro from TAI opens every door at the fair. Find their desk before anything else on Day 1.</p><div class="lrow"><a class="lnk" href="https://tai-india.org">🌐 tai-india.org</a><a class="lnk" href="tel:+919711409080">📞 +91 9711409080</a></div></div>
+  </div>
+</div>
+
+<!-- ── P3: TARGETS ── -->
+<div class="panel p3">
+  <div class="sl">Priority 1 — must close a next step</div>
+  <div class="card p1"><h3>Smartivity Labs</h3><div class="sub">New Delhi · India's #1 STEAM toy brand · Toy of the Year 2025 · CEO: Ashwini Kumar</div><div><span class="badge bb">co-brand</span><span class="badge bc">content</span></div><div class="ask"><b>Ask:</b> Co-create a "Smartivity × Cheeko" STEM kit — physical wooden build + RFID card triggers Cheeko AI to guide child step by step. They get tech; we get shelf presence.</div><div class="lrow"><a class="lnk" href="https://smartivity.in">🌐 smartivity.in</a><a class="lnk" href="mailto:info@smartivity.in">✉️ info@smartivity.in</a></div></div>
+  <div class="card p1"><h3>Mirana Toys</h3><div class="sub">Pune · ₹57.5 Cr Series A Nov 2025 · 3,000+ stores · CEO: Devansh Sharma</div><div><span class="badge bd">distribution</span><span class="badge bm">manufacturing</span><span class="badge bb">co-brand</span></div><div class="ask"><b>Ask:</b> (1) Distribute Cheeko through 3,000 stores, or (2) contract manufacture enclosures at new factory, or (3) Cheeko AI inside a Mirana robot form factor.</div><div class="lrow"><a class="lnk" href="https://miranatoys.com">🌐 miranatoys.com</a></div></div>
+  <div class="card p1"><h3>Katha Room</h3><div class="sub">Apple Design Awards 2026 Finalist · Screen-free Indian audio · 250+ stories · 5 languages</div><div><span class="badge bc">content</span></div><div class="ask"><b>Ask:</b> Preferred hardware partner — their stories power Cheeko RFID content packs. They get hardware distribution; we get premium Indian content at launch.</div><div class="lrow"><a class="lnk" href="https://katharoom.com">🌐 katharoom.com</a></div></div>
+  <div class="sl">Priority 2</div>
+  <div class="card p2"><h3>Amar Chitra Katha</h3><div class="sub">Mumbai · Est. 1967 · CEO: Aman Srivastava · VP Digital: Deepesh Kothari</div><div><span class="badge bc">content</span></div><div class="ask"><b>Ask:</b> License ACK audio stories for RFID content packs. India's most trusted children's IP — instant parent trust signal for Cheeko.</div><div class="lrow"><a class="lnk" href="https://amarchitrakatha.com">🌐 amarchitrakatha.com</a></div></div>
+  <div class="card p2"><h3>Funskool India</h3><div class="sub">Chennai · MRF Group · CEO: K A Shabir · India's #1 toy retail network</div><div><span class="badge bd">distribution</span></div><div class="ask"><b>Ask:</b> Distribution starting Tier 1 cities. Angle: "We're the first AI voice toy made in India. You can own this category."</div><div class="lrow"><a class="lnk" href="https://funskoolindia.com">🌐 funskoolindia.com</a></div></div>
+  <div class="sl">Priority 3</div>
+  <div class="card p3"><h3>DKos Group</h3><div class="sub">Ahmedabad · Gujarat distributor · Confirmed attending Toy Biz 2026</div><div><span class="badge bd">distribution</span></div><div class="ask"><b>Ask:</b> Regional distribution rights for Gujarat — manageable first market. They're actively scouting new brands at Toy Biz.</div><div class="lrow"><a class="lnk" href="https://dkosgroup.in">🌐 dkosgroup.in</a></div></div>
+  <div class="card p3"><h3>Toy Association of India</h3><div class="sub">5,000+ members · Organiser · Find desk on Day 1</div><div><span class="badge bn">network gateway</span></div><div class="ask"><b>Ask:</b> One TAI leadership intro = every door at the fair opens. Highest ROI action of Day 1.</div><div class="lrow"><a class="lnk" href="https://tai-india.org">🌐 tai-india.org</a><span style="font-size:11px;color:#6b7280"> 📞 +91 9711409080</span></div></div>
+</div>
+
+<!-- ── P4: CHECKLIST ── -->
+<div class="panel p4">
+  <div class="sl">Do this week — June 22–27</div>
+  <div class="tbox">
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">Email Smartivity Labs — pre-book a meeting</div><div class="tm">info@smartivity.in · Saket, New Delhi</div></div></label></div>
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">WhatsApp Katha Room</div><div class="tm">katharoom.com contact page · mention screen-free + RFID</div></div></label></div>
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">Call TAI and register — get attendee list</div><div class="tm">+91 9711409080 · Anarkali Complex, Jhandewalan Ext, Delhi</div></div></label></div>
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">Reach out to DKos Group Ahmedabad</div><div class="tm">dkosgroup.in · Gujarat distributor confirmed attending</div></div></label></div>
+  </div>
+  <div class="sl">Before July 3rd</div>
+  <div class="tbox">
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">Prepare 3 Cheeko devices with 4 RFID card sets</div><div class="tm">Story, game, AI, English — test all before visitors arrive</div></div></label></div>
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">Get parent app to TestFlight / Play Store internal track</div><div class="tm">Pair device, see last 3 played, check battery, push content</div></div></label></div>
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">Create 60-second demo video of Cheeko in action</div><div class="tm">RFID tap → story → game → parent app · link from QR on leave-behind</div></div></label></div>
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">Print 200 one-page leave-behinds with QR code</div><div class="tm">Company · product · 3 partnership types · WhatsApp contact</div></div></label></div>
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">Set up WhatsApp QR code display for stall</div><div class="tm">Printed poster — visitors add Abilash directly on the spot</div></div></label></div>
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">Prepare internal pricing framework doc</div><div class="tm">Hardware cost, licensing model, distribution margin</div></div></label></div>
+  </div>
+  <div class="sl">Logistics</div>
+  <div class="tbox">
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">Brief whole team on openers — 30 min dry-run</div><div class="tm">Every stall person pitches confidently before July 4</div></div></label></div>
+    <div class="trow"><label><input type="checkbox"><div><div class="tt">Book hotel near Pragati Maidan for July 4–7</div><div class="tm">Stay on-site all 4 days — key buyers come Monday and Tuesday</div></div></label></div>
+  </div>
+</div>
+
+<!-- ── P5: 4-DAY PLAN ── -->
+<div class="panel p5">
+  <div class="dc"><div class="dh"><div class="db db1">D1</div><div><div class="dtitle">Saturday July 4 — orient and map</div><div class="dfocus">Walk all halls before selling anything</div></div></div>
+    <div class="di">📍 Walk halls 2–5, locate Funskool, Smartivity, Mirana, edu-toy zones first</div>
+    <div class="di">🏢 Find TAI organiser desk — get intro to leadership (gateway to 5,000 members)</div>
+    <div class="di">🤝 Meet Smartivity — Delhi-based, home turf, easiest warm Day 1 conversation</div>
+    <div class="di">▶️ Run Cheeko demo — test RFID cards work reliably in hall with ambient noise</div>
+    <div class="di">📓 Collect cards — note hall + stall number for every interesting contact</div>
+  </div>
+  <div class="dc"><div class="dh"><div class="db db2">D2</div><div><div class="dtitle">Sunday July 5 — content partners</div><div class="dfocus">All conversations on content licensing today</div></div></div>
+    <div class="di">📚 Target: Amar Chitra Katha, Katha Room, Karadi Tales</div>
+    <div class="di">🏫 Target: Frank Educational Aids, Pratham Books reps</div>
+    <div class="di">💬 Pitch: "We have device + AI. You have content. Here's the partnership."</div>
+    <div class="di">📄 Leave one-pager + QR → demo video at every content company stall</div>
+    <div class="di">📱 Add all contacts on WhatsApp before leaving</div>
+  </div>
+  <div class="dc"><div class="dh"><div class="db db3">D3</div><div><div class="dtitle">Monday July 6 — distribution partners</div><div class="dfocus">Most serious B2B buyers arrive Monday–Tuesday</div></div></div>
+    <div class="di">🚚 Target: Funskool reps, Mirana (Devansh / Ravi), DKos Group</div>
+    <div class="di">🏪 Target: Hamleys and Toys R Us category buyers</div>
+    <div class="di">🎮 Demo games — Tetris, Animal, Math. Biggest differentiator vs. audio-only competitors</div>
+    <div class="di">📱 Show parent app — device + app separates Cheeko from a dumb speaker</div>
+  </div>
+  <div class="dc"><div class="dh"><div class="db db4">D4</div><div><div class="dtitle">Tuesday July 7 — follow-ups and closes</div><div class="dfocus">Don't leave Delhi without a committed next step from every warm lead</div></div></div>
+    <div class="di">🔁 Revisit every Day 1–3 warm lead before 3pm — fair closes at 6pm</div>
+    <div class="di">📅 Commit to specific next action per hot lead — "send sample / meet Aug / call next week"</div>
+    <div class="di">📱 Every warm contact has Abilash on WhatsApp before leaving</div>
+    <div class="di">📝 Write debrief notes per partner while fresh — before leaving Delhi</div>
+    <div class="di">✉️ Send follow-up to all hot leads same evening</div>
+  </div>
+</div>
+
+<!-- ── P6: STALL ── -->
+<div class="panel p6">
+  <div class="sl">Must-have at the stall</div>
+  <div class="sg">
+    <div class="si must"><h4>🔊 3 working Cheeko devices</h4><p>RFID tap → story in under 3 seconds. One live demo beats 10 slides. 3 units for redundancy.</p></div>
+    <div class="si must"><h4>🃏 4 different RFID cards</h4><p>Story, game, AI voice, English learning — show the mechanic variety in 2 minutes.</p></div>
+    <div class="si must"><h4>📱 Parent app on phone</h4><p>TestFlight fine. Device + parent control separates Cheeko from a dumb speaker.</p></div>
+    <div class="si must"><h4>🎮 Games demo running</h4><p>Tetris, Animal, Math — biggest differentiator. Let visitors play for 30 seconds.</p></div>
+    <div class="si"><h4>📄 200 one-page leave-behinds</h4><p>Company · product · 3 partnership types · WhatsApp · QR → demo video.</p></div>
+    <div class="si"><h4>💬 WhatsApp QR at stall</h4><p>Printed prominently — visitors add Abilash on the spot.</p></div>
+  </div>
+  <div class="sl">What NOT to show</div>
+  <div class="skipbox" style="margin-bottom:12px">
+    <div class="srow">✗ Internal firmware / architecture slides<span class="sr">Nobody at Toy Biz cares</span></div>
+    <div class="srow">✗ Finalised price sheets<span class="sr">Don't get cornered</span></div>
+    <div class="srow">✗ Anything not working reliably<span class="sr">One glitch kills trust</span></div>
+  </div>
+  <div class="sl">Who to skip entirely</div>
+  <div class="skipbox">
+    <div class="srow">✗ Diecast / metal toy manufacturers<span class="sr">No overlap</span></div>
+    <div class="srow">✗ Soft toy / stuffed animal vendors<span class="sr">Different category</span></div>
+    <div class="srow">✗ Plastic toy importers from China<span class="sr">Want high-volume low-margin</span></div>
+    <div class="srow">✗ Pure wholesale traders<span class="sr">Too early</span></div>
+  </div>
+</div>
+
+<!-- ── P7: OPENERS ── -->
+<div class="panel p7">
+  <p style="font-size:13px;color:#6b7280;margin-bottom:12px">Memorise the relevant opener before walking up. Say it naturally — not like a script.</p>
+  <div class="op"><div class="lbl">📚 For content companies — Katha Room, ACK, Pratham, Karadi Tales</div><blockquote>"We've built an AI voice toy for Indian kids that plays audio content through physical RFID cards — completely screen-free. We need Indian content partners for launch. Your stories would be the first thing a child hears when they pick up the card. What would it take to explore licensing your content?"</blockquote></div>
+  <div class="op"><div class="lbl">🚚 For distributors — Funskool, DKos, regional distributors</div><blockquote>"We're launching India's first AI companion toy for kids — physical RFID cards, voice AI, educational games, and a parent app. We have the product; we need distribution for Day 1. We're looking for a regional partner who wants to own this category first."</blockquote></div>
+  <div class="op"><div class="lbl">🔧 For manufacturing / co-brand — Smartivity, Mirana</div><blockquote>"We have the AI and software platform. You have the manufacturing and retail reach. There's a product we could build together that neither of us can do alone — want to explore what that looks like?"</blockquote></div>
+  <div class="op"><div class="lbl">🏢 For TAI leadership — organiser desk, Day 1</div><blockquote>"We're Cheeko — an Indian-made AI voice toy for kids. We're looking to connect with educational toy companies and content publishers at this fair. Could you point us to the right exhibitors and make a warm introduction?"</blockquote></div>
+  <div class="op"><div class="lbl">🤖 General cold intro</div><blockquote>"We're building Cheeko — an AI voice companion for Indian kids aged 3 to 8. The child taps a physical card, the device tells a story, plays a game, or lets them ask the AI questions — all screen-free. Looking for content, distribution, and manufacturing partners. What does your company do?"</blockquote></div>
+</div>
+
+</div><!-- /panels -->
+</div><!-- /page -->
+</body>
+</html>

@@ -1,0 +1,6 @@
+node_modules/
+visitors.db
+photos/
+backups/
+*.log
+.env
