@@ -58,7 +58,7 @@ async function enrich(id, btn) {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) {
       toast(d.error === "ocr_not_configured"
-        ? "Set ANTHROPIC_API_KEY on the server to enable OCR"
+        ? "Set GOOGLE_API_KEY in .env to enable OCR"
         : "Enrich failed: " + (d.error || r.status), false);
       return;
     }

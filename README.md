@@ -43,15 +43,16 @@ npm test    # node --test — covers phone normalization (the WhatsApp-critical 
 ## v2 enrichment — OCR (when internet is back)
 
 Each lead with a card photo shows an **✨ Enrich** button on the dashboard. It
-sends the photo to Claude (vision) and fills in any **blank** fields it can
-read — never overwriting what staff typed, never touching the phone number,
-skipping anything it can't read. See [ADR 0002](docs/adr/0002-defer-ocr-to-online-enrichment.md).
+sends the photo to **Gemini 2.5 Flash** (vision) and fills in any **blank**
+fields it can read — never overwriting what staff typed, never touching the
+phone number, skipping anything it can't read. See [ADR 0002](docs/adr/0002-defer-ocr-to-online-enrichment.md).
 
-Enable it by setting an env var before `npm start` (internet required):
+Enable it by creating a `.env` file (internet required; loaded automatically
+on `npm start`):
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...    # required to turn on Enrich
-OCR_MODEL=claude-haiku-4-5-20251001   # optional, this is the default
+GOOGLE_API_KEY=...                 # Gemini key from Google AI Studio (required)
+OCR_MODEL=gemini-2.5-flash         # optional, this is the default
 ```
 
 Without the key, Enrich returns "not configured" and changes nothing.

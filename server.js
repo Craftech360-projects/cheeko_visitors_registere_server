@@ -100,39 +100,45 @@ app.get("/api/leads", (_req, res) => {
 // v2 (ADR 0002): OCR-enrich a lead's BLANK fields from its card photo(s).
 // Internet + ANTHROPIC_API_KEY required. Never overwrites human input or phone.
 app.post("/api/leads/:id/enrich", async (req, res) => {
-  const key = process.env.ANTHROPIC_API_KEY;
+  const key = process.env.GOOGLE_API_KEY; // Gemini key from Google AI Studio
   if (!key) return res.status(400).json({ error: "ocr_not_configured" });
   const lead = db.prepare("SELECT * FROM leads WHERE id=?").get(req.params.id);
   if (!lead) return res.status(404).json({ error: "not_found" });
 
-  const images = [];
+  const images = []; // base64 jpegs of the card
   for (const p of [lead.front_photo, lead.back_photo]) {
     if (!p) continue;
     try {
-      const data = fs.readFileSync(path.join(ROOT, p)).toString("base64");
-      images.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data } });
+      images.push(fs.readFileSync(path.join(ROOT, p)).toString("base64"));
     } catch { /* missing file: skip */ }
   }
   if (!images.length) return res.status(400).json({ error: "no_photo" });
 
   const prompt =
-    "This is a business/visiting card. Extract these fields and respond with ONLY a JSON object, no markdown: " +
+    "This is a business/visiting card. Extract these fields as JSON: " +
     '{"name":..., "company":..., "city":..., "products":...}. ' +
     "Use null for any field that is not clearly legible. Do not guess.";
+  const model = process.env.OCR_MODEL || "gemini-2.5-flash";
 
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({
-        model: process.env.OCR_MODEL || "claude-haiku-4-5-20251001",
-        max_tokens: 400,
-        messages: [{ role: "user", content: [...images, { type: "text", text: prompt }] }],
-      }),
-    });
+    const parts = images.map((d) => ({ inline_data: { mime_type: "image/jpeg", data: d } }));
+    parts.push({ text: prompt });
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: { "x-goog-api-key": key, "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { responseMimeType: "application/json", maxOutputTokens: 400 },
+        }),
+      }
+    );
     if (!r.ok) return res.status(502).json({ error: "ocr_failed", status: r.status });
     const data = await r.json();
-    const ocr = parseOcrJson(data.content && data.content[0] && data.content[0].text);
+    const c = data.candidates && data.candidates[0];
+    const text = c && c.content && c.content.parts && c.content.parts[0] && c.content.parts[0].text;
+    const ocr = parseOcrJson(text);
     const { updates, filled } = mergeEnrichment(lead, ocr); // filled ⊆ whitelisted fields
     if (filled.length) {
       const set = filled.map((f) => `${f}=@${f}`).join(", ");
