@@ -56,7 +56,8 @@ function savePhoto(dataUrl, id, side) {
 // --- Supabase sync (online-only, optional). Push leads -> table, photos -> bucket. ---
 function supaConfig() {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
+  // New Supabase naming is SUPABASE_SECRET_KEY; fall back to the older service_role name.
+  const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key) return null;
   return { url, key, bucket: process.env.SUPABASE_BUCKET || "cards" };
 }
