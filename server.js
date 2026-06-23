@@ -270,11 +270,36 @@ app.get("/qr", async (_req, res) => {
   const url = `http://${lanIp()}:${PORT}/`;
   const img = await QRCode.toDataURL(url, { width: 320, margin: 2 });
   res.send(
-    `<!doctype html><meta name=viewport content="width=device-width,initial-scale=1">
-     <body style="font-family:sans-serif;text-align:center;padding:40px">
-     <h2>Scan to open the capture page</h2>
-     <img src="${img}" alt="QR"><p style="font-size:20px"><a href="${url}">${url}</a></p>
-     </body>`
+    `<!doctype html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Scan to capture leads</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito:wght@400;600;700;800&display=swap');
+  *{box-sizing:border-box;margin:0}
+  body{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;
+    background:#FAF7F2;font-family:"Nunito",-apple-system,'Segoe UI',sans-serif;color:#1C1C1C}
+  .card{background:linear-gradient(to right bottom,#fff,#FFE8DA);border:1px solid #ece5db;border-radius:28px;
+    padding:32px 28px;text-align:center;max-width:420px;width:100%;box-shadow:0 12px 40px rgba(60,40,20,.12);position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:linear-gradient(90deg,#FF8A3D,#E96B2C)}
+  .eyebrow{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#E96B2C;margin-bottom:6px}
+  h1{font-family:"DM Serif Display",Georgia,serif;font-weight:400;font-size:30px;line-height:1.1;margin-bottom:8px}
+  p.sub{font-size:14px;color:#5C6166;margin-bottom:22px}
+  .qr{background:#fff;border-radius:20px;padding:18px;display:inline-block;box-shadow:0 4px 16px rgba(60,40,20,.1)}
+  .qr img{display:block;width:288px;height:288px;border-radius:8px}
+  .url{margin-top:22px;display:inline-block;background:#fff;border:1.5px solid #f0d9c6;color:#cf5a1f;
+    font-weight:700;font-size:16px;padding:11px 20px;border-radius:9999px;word-break:break-all}
+  .hint{margin-top:14px;font-size:12.5px;color:#9aa0a6}
+</style></head>
+<body>
+  <div class="card">
+    <div class="eyebrow">Cheeko Pro · Lead Capture</div>
+    <h1>Scan to add a lead</h1>
+    <p class="sub">Point your phone camera here — no app needed</p>
+    <div class="qr"><img src="${img}" alt="QR code linking to the capture page"></div>
+    <a class="url" href="${url}">${url}</a>
+    <div class="hint">Phone and this PC must be on the same Wi-Fi</div>
+  </div>
+</body></html>`
   );
 });
 
