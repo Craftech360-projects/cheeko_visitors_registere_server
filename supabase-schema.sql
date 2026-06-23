@@ -2,9 +2,10 @@
 -- 1. Run this in Supabase Studio → SQL Editor.
 -- 2. Create a Storage bucket named "cards" (Storage → New bucket; make it Public
 --    if you want the photo URLs to open without auth).
--- 3. Put SUPABASE_URL + SUPABASE_SERVICE_KEY (+ optional SUPABASE_BUCKET) in .env.
+-- 3. Put SUPABASE_URL + SUPABASE_SECRET_KEY (+ optional SUPABASE_BUCKET) in .env.
+--    (SUPABASE_SECRET_KEY = the sb_secret_… key, or the older service_role key.)
 --
--- The server uses the service_role key, which bypasses Row Level Security, so no
+-- The server uses the secret key, which bypasses Row Level Security, so no
 -- RLS policies are needed for the sync to work.
 
 create table if not exists public.leads (
