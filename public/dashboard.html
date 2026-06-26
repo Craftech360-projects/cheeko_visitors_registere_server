@@ -27,7 +27,6 @@
     <select id="filter"><option value="">All</option><option value="hot">🔴 Hot</option><option value="warm">🟡 Warm</option><option value="cold">🟢 Cold</option></select>
     <a class="btn-primary" style="width:auto;margin-top:0;text-decoration:none" href="/export.csv">⬇ Export CSV</a>
     <button class="btn-primary" style="width:auto;margin-top:0;background:#5F3DC4" onclick="enrichAll(this)">✨ Enrich all pending</button>
-    <button class="btn-primary" style="width:auto;margin-top:0;background:#0B7A5E" onclick="syncAll(this)">☁️ Sync all to Supabase</button>
   </div>
 
   <details>
@@ -91,23 +90,7 @@ async function enrichAll(btn) {
   }
 }
 
-async function syncAll(btn) {
-  const label = btn.textContent; btn.textContent = "Syncing…"; btn.disabled = true;
-  try {
-    const r = await fetch("/api/sync", { method: "POST" });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      toast(d.error === "supabase_not_configured"
-        ? "Set SUPABASE_URL + SUPABASE_SERVICE_KEY in .env"
-        : "Sync failed: " + (d.error || r.status), false);
-      return;
-    }
-    const failed = d.errors && d.errors.length;
-    toast(`Synced ${d.synced}/${d.total} leads` + (failed ? ` (${failed} failed — see logs)` : ""), !failed);
-  } finally {
-    btn.textContent = label; btn.disabled = false;
-  }
-}
+
 const $ = id => document.getElementById(id);
 function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 
@@ -133,15 +116,15 @@ function render(){
     const title = esc(l.name) || esc(l.company) || "(no name)";
     const sub = l.name && l.company ? esc(l.company) : "";
     const tag = l.tag ? `<span class="tag ${l.tag}">${l.tag}</span>` : "";
-    const thumb = l.front_photo
-      ? `<a href="/${l.front_photo}" target="_blank"><img class="thumb" src="/${l.front_photo}"></a>`
+    const thumb = l.front_url
+      ? `<a href="${l.front_url}" target="_blank"><img class="thumb" src="${l.front_url}"></a>`
       : `<div class="nothumb">🪪</div>`;
     return `<tr>
       <td>
         <div style="display:flex;gap:9px">
           ${thumb}
           <div>
-            <div class="co">${title}${tag}${l.enriched_at ? ` <span class="tag cold">✓ enriched</span>` : (l.front_photo ? ` <span class="tag warm">pending</span>` : "")}</div>
+            <div class="co">${title}${tag}${l.enriched_at ? ` <span class="tag cold">✓ enriched</span>` : (l.front_url ? ` <span class="tag warm">pending</span>` : "")}</div>
             ${sub ? `<div class="ct">${sub}</div>` : ""}
             ${l.email ? `<div class="ct">✉️ ${esc(l.email)}</div>` : ""}
             ${l.website ? `<div class="ct">🌐 <a href="${/^https?:\/\//.test(l.website) ? esc(l.website) : "https://" + esc(l.website)}" target="_blank">${esc(l.website)}</a></div>` : ""}
@@ -149,8 +132,8 @@ function render(){
               <a class="btn bw" href="${waLink(l)}" target="_blank">💬 WhatsApp</a>
               ${l.email ? `<a class="btn be" href="mailto:${esc(l.email)}">✉️ Email</a>` : ""}
               <a class="btn bp" href="tel:+${l.wa_phone}">📞</a>
-              ${l.front_photo ? `<button class="btn be" onclick="enrich(${l.id},this)">${l.enriched_at ? "↻ Re-enrich" : "✨ Enrich"}</button>` : ""}
-              <button class="btn bp" onclick="toggleDetail(${l.id})">ⓘ Details</button>
+              ${l.front_url ? `<button class="btn be" onclick="enrich('${l.id}',this)">${l.enriched_at ? "↻ Re-enrich" : "✨ Enrich"}</button>` : ""}
+              <button class="btn bp" onclick="toggleDetail('${l.id}')">ⓘ Details</button>
             </div>
           </div>
         </div>
@@ -173,8 +156,8 @@ function detailRow(l) {
       ${F("Website", site)}${F("City", esc(l.city))}${F("State / region", esc(l.state))}
       ${F("Products / interest", esc(l.products))}${F("Note", esc(l.note))}
       ${F("Enriched", l.enriched_at ? esc(l.enriched_at) : "pending")}${F("Captured", esc(l.created_at))}
-      ${F("Front photo", l.front_photo ? `<a href="/${l.front_photo}" target="_blank">view</a>` : "")}
-      ${F("Back photo", l.back_photo ? `<a href="/${l.back_photo}" target="_blank">view</a>` : "")}
+      ${F("Front photo", l.front_url ? `<a href="${l.front_url}" target="_blank">view</a>` : "")}
+      ${F("Back photo", l.back_url ? `<a href="${l.back_url}" target="_blank">view</a>` : "")}
     </div></td></tr>`;
 }
 
