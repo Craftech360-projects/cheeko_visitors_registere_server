@@ -72,19 +72,23 @@ async function enrich(id, btn) {
 }
 
 async function enrichAll(btn) {
-  const label = btn.textContent; btn.textContent = "Enriching…"; btn.disabled = true;
+  // Client-side loop over the single-lead route so the count ticks live.
+  const pending = leads.filter(l => l.front_url && !l.enriched_at);
+  if (!pending.length) { toast("Nothing pending — all done"); return; }
+  const label = btn.textContent; btn.disabled = true;
+  let done = 0, failed = 0;
   try {
-    const r = await fetch("/api/enrich-all", { method: "POST" });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      toast(d.error === "ocr_not_configured" ? "Set GOOGLE_API_KEY in .env to enable OCR"
-        : "Enrich failed: " + (d.error || r.status), false);
-      return;
+    for (const l of pending) {
+      btn.textContent = `Enriching ${done + failed + 1}/${pending.length}…`;
+      const r = await fetch(`/api/leads/${l.id}/enrich`, { method: "POST" });
+      if (r.status === 400) {
+        const d = await r.json().catch(() => ({}));
+        if (d.error === "ocr_not_configured") { toast("Set GOOGLE_API_KEY in .env to enable OCR", false); return; }
+      }
+      r.ok ? done++ : failed++;
     }
     await load();
-    const failed = d.errors && d.errors.length;
-    toast(d.total === 0 ? "Nothing pending — all done"
-      : `Enriched ${d.enriched}/${d.total} pending` + (failed ? ` (${failed} failed — see logs)` : ""), !failed);
+    toast(`Enriched ${done}/${pending.length}` + (failed ? ` (${failed} failed — see logs)` : ""), !failed);
   } finally {
     btn.textContent = label; btn.disabled = false;
   }
