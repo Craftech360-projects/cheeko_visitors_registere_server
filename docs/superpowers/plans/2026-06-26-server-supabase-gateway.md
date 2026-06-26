@@ -36,6 +36,10 @@
 -- Put SUPABASE_URL + SUPABASE_SECRET_KEY (+ optional SUPABASE_BUCKET) in .env.
 -- The server uses the secret key (bypasses RLS), so no RLS policies are needed.
 
+-- The old table used `id bigint`; recreate it with `id uuid`. Drops existing
+-- rows (confirmed dev/test data only).
+drop table if exists public.leads cascade;
+
 create table if not exists public.leads (
   id          uuid primary key,        -- client-generated; upsert conflict key
   name        text,
