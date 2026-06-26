@@ -99,6 +99,11 @@ can assign it offline and the server can upsert idempotently.
 **Local table** mirrors the server fields plus `front_path`, `back_path` (local
 file paths) and `synced` (0/1).
 
+**`synced` lifecycle:** a lead is created with `synced=0`, set to `synced=1` on
+a successful upload, and **reset to `synced=0` whenever it is edited** — so an
+edit to an already-synced lead goes up on the next press. The Sync button only
+ever looks at `synced=0` rows, so already-uploaded leads are never re-sent.
+
 **Screens:**
 1. **Capture** — form (phone required + optional fields), snap front + optional
    back card photo → save locally, `synced=0`. Warn if the phone was already
@@ -137,6 +142,18 @@ Upload and OCR are **two separate steps**, deliberately decoupled.
 OCR is not glued onto upload because it is slow (~2–5s/card) and costs money;
 coupling would let a Gemini hiccup block getting data safe, and a lead with no
 card photo needs no OCR.
+
+## Concurrent sync from multiple phones
+
+Each phone generates its own UUIDs locally, so two staff syncing at the same
+time produce disjoint row sets — Postgres handles the concurrent upserts to
+different rows with no locking issue. Safe by design.
+
+The only "duplicate" is a human case: the same visitor handed a card to two
+staff, captured on two phones → two different UUIDs → two rows on the dashboard.
+**Accepted as-is** — it is rare and a one-click delete on the dashboard. No
+cross-device dedup is built. `ponytail: don't build dedup for a rare manual
+case; add a "same wa_phone" dashboard hint only if it ever bites.`
 
 `ponytail: bulk Enrich-all is sequential (~2–3 min for 50 cards). Add bounded
 concurrency only if the wait bites.`
