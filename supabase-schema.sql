@@ -1,15 +1,14 @@
--- Visitors Register → Supabase sync setup.
--- 1. Run this in Supabase Studio → SQL Editor.
--- 2. Create a Storage bucket named "cards" (Storage → New bucket; make it Public
---    if you want the photo URLs to open without auth).
--- 3. Put SUPABASE_URL + SUPABASE_SECRET_KEY (+ optional SUPABASE_BUCKET) in .env.
---    (SUPABASE_SECRET_KEY = the sb_secret_… key, or the older service_role key.)
---
--- The server uses the secret key, which bypasses Row Level Security, so no
--- RLS policies are needed for the sync to work.
+-- Visitors Register → Supabase setup (run in Supabase Studio → SQL Editor).
+-- Then create a Storage bucket named "cards" (Storage → New bucket → Public).
+-- Put SUPABASE_URL + SUPABASE_SECRET_KEY (+ optional SUPABASE_BUCKET) in .env.
+-- The server uses the secret key (bypasses RLS), so no RLS policies are needed.
+
+-- The old table used `id bigint`; recreate it with `id uuid`. Drops existing
+-- rows (confirmed dev/test data only).
+drop table if exists public.leads cascade;
 
 create table if not exists public.leads (
-  id          bigint primary key,   -- same id as the local SQLite lead; upsert key
+  id          uuid primary key,        -- client-generated; upsert conflict key
   name        text,
   company     text,
   email       text,
@@ -21,8 +20,16 @@ create table if not exists public.leads (
   products    text,
   note        text,
   tag         text,
-  front_url   text,                  -- public URL of the front card photo
-  back_url    text,                  -- public URL of the back card photo
-  enriched_at timestamptz,           -- set when OCR enrichment was run (null = pending)
+  front_url   text,                     -- public URL of the front card photo
+  back_url    text,                     -- public URL of the back card photo
+  enriched_at timestamptz,              -- set when OCR ran (null = pending)
   created_at  timestamptz
+);
+
+create index if not exists leads_created_at_idx on public.leads (created_at desc);
+
+-- Editable WhatsApp follow-up template (moved off SQLite).
+create table if not exists public.settings (
+  key   text primary key,
+  value text
 );
