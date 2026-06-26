@@ -1,12 +1,7 @@
 node_modules/
-visitors.db
-photos/
-backups/
 *.log
 .env
 .claude/
-visitors.db-wal
-visitors.db-shm
 
 # personal test card images
 rahul.png

@@ -1,9 +1,11 @@
 # Visitors Register — Context
 
-A tool for capturing sales leads at a physical event stall, where there is a
-local network but **no internet access**. Leads are captured on phones,
-stored on a central PC, reviewed on a dashboard, and contacted later (when
-internet is available) via one-tap WhatsApp.
+A tool for capturing sales leads at a physical event stall. A **Flutter app**
+captures leads offline (local SQLite + on-device photos), then uploads them
+to a cloud server via a manual Sync button when internet is available. The
+server is a stateless Node/Express gateway on a DigitalOcean droplet, backed
+by **Supabase** (Postgres for lead rows, Storage for card photos). Leads are
+reviewed, enriched, and followed up on the web dashboard.
 
 ## Glossary
 
@@ -35,14 +37,18 @@ Lead's Card photo(s) to fill in fields left blank at capture time. Per-Lead,
 best-effort: any field OCR cannot read is skipped, never guessed.
 
 ### Capture Device
-A phone (or tablet) used by stall staff to capture Leads. Runs nothing but a
-web browser pointed at the Lead Server. Multiple Capture Devices may run at
-once.
+A phone (or tablet) running the **Flutter app**, used by stall staff to
+capture Leads offline. Stores leads locally (SQLite) with card photos on
+device; syncs to the cloud server via a manual Sync button when internet is
+available. `capture.html` (served at `/`) acts as a browser fallback for
+devices without the app.
 
 ### Lead Server
-A single PC on the event's local network. Holds the one database of Leads and
-serves both the capture page and the dashboard to Capture Devices over LAN
-HTTP. There is exactly one Lead Server. No internet required for capture.
+A stateless **Node/Express gateway** running on a DigitalOcean droplet. It is
+the single front door to Supabase — normalises phone numbers, stores card
+photos in Supabase Storage, and upserts lead rows in Supabase Postgres.
+Secrets (Supabase, Gemini) are held only server-side. A droplet restart loses
+no data — all state lives in Supabase.
 
 ### Follow-up
 Contacting a Lead after the event via WhatsApp. Done from the Dashboard, one
@@ -53,17 +59,18 @@ API). One fixed message Template, editable before a send-session if needed.
 Requires internet.
 
 ### Backup
-Protecting captured Leads against loss of the single Lead Server. Two tiers:
-- **Local (primary, offline):** the Lead Server auto-copies `visitors.db` to a
-  `backups/` folder hourly; staff drag `visitors.db` + `photos/` to a USB at
-  end of day. This is the only tier that works *at the venue* (no internet).
-- **Cloud (secondary, online-only):** an opportunistic Dashboard action that
-  pushes the database and photos to a Supabase Storage bucket whenever
-  internet is available. Optional, off until configured. A bonus copy, never
-  the primary safety net.
+Leads are durable in **Supabase** (Postgres + Storage) as soon as the Flutter
+app's Sync button is pressed. There is no separate backup step — Supabase is
+the primary datastore, not a secondary copy. The server is stateless and holds
+no local data; a droplet restart or replacement loses nothing.
 
 ### LAN-only / Offline
-"Offline" means **no internet (WAN)**, NOT "no network". The Lead Server and
-Capture Devices share a local network (router or PC hotspot). Therefore there
-is no peer-to-peer sync — it is plain client–server over LAN. (This is why
-LocalSend / WebRTC are not used.)
+These terms no longer describe the system. **Offline** now means the Flutter
+app works without internet during the event, storing leads locally on the
+device. **Sync** (the in-app button) uploads accumulated leads to the cloud
+server when internet is available. There is no LAN, no central PC, no
+peer-to-peer sync. The architecture is Flutter app → cloud server (droplet) →
+Supabase. This supersedes the no-internet premise of
+[ADR 0001](docs/adr/0001-lan-client-server-not-peer-to-peer.md); see the
+[online lead capture design spec](docs/superpowers/specs/2026-06-26-online-lead-capture-design.md)
+for the authoritative current architecture.

@@ -1,61 +1,44 @@
 # Visitors Register
 
-Offline event lead capture. Phones on the venue LAN capture leads → one PC
-stores them → dashboard follows up via WhatsApp later. See [CONTEXT.md](CONTEXT.md)
-for the glossary and `docs/adr/` for the two key decisions.
+Cloud lead capture for event stalls. A **Flutter app** captures leads offline (local SQLite + on-device photos) and uploads them via a manual Sync button when internet is available. The **Node/Express gateway** on a DigitalOcean droplet writes leads to **Supabase** (Postgres rows + Storage photos). Review, OCR enrichment, WhatsApp follow-up, and CSV export happen on the **web dashboard**. See [CONTEXT.md](CONTEXT.md) for the glossary and `docs/adr/` for the two key decisions.
 
 ## Run
 
+### Environment
+
+Create a `.env` file (never committed):
+
 ```
-npm install     # ONCE, on a machine WITH internet (see checklist)
-npm start       # node server.js — serves on 0.0.0.0:8080
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_SECRET_KEY=...          # service_role key (Project Settings → API)
+SUPABASE_BUCKET=cards            # optional — defaults to "cards"
+GOOGLE_API_KEY=...               # Gemini key from Google AI Studio (for OCR/Enrich)
+OCR_MODEL=gemini-2.5-flash       # optional — this is the default
+PUBLIC_URL=https://your-droplet  # optional — logged on startup
 ```
 
-On boot it prints the LAN URLs:
+### Start
 
-- **Capture (phones):** `http://<pc-lan-ip>:8080/`
-- **Stall QR code:** `http://<pc-lan-ip>:8080/qr` — open on the PC, print/show it; phones scan to open the capture page
-- **Dashboard:** `http://<pc-lan-ip>:8080/dashboard`
+```
+npm install
+npm start    # node server.js — listens on 0.0.0.0:8080
+```
 
-## ⚠️ Pre-venue checklist (there is no internet at the stall)
+### Endpoints
 
-1. On the venue PC, **install Node 18+** beforehand.
-2. Copy the **entire project folder including `node_modules/`** to the PC.
-   You cannot `npm install` at the venue — vendor it now.
-3. Make sure the PC and phones join the **same WiFi/router** (or the PC's
-   hotspot). No internet needed — just a shared network.
-4. `npm start`, open `/qr` on the PC, and you're live.
+- **Capture (browser fallback):** `http://<host>:8080/` — `capture.html` POSTs to the cloud server; use the Flutter app as the primary capture device.
+- **Dashboard:** `http://<host>:8080/dashboard` — review leads, run OCR enrichment, send WhatsApp follow-ups, export CSV.
+- **API:** `POST /api/leads` — used by the Flutter app and the browser fallback. Accepts lead fields + base64 card photos; uploads photos to Supabase Storage, normalizes the phone number, upserts the row keyed on the client-generated UUID.
 
-## Data & backup
+## Flutter app (primary capture device)
 
-- `visitors.db` (SQLite) + `photos/` hold everything. Both gitignored.
-- **Primary backup:** server auto-copies the DB to `backups/` hourly; drag
-  `visitors.db` + `photos/` to a USB at end of day.
-- **Cloud sync (optional, internet only):** see "Supabase sync" below.
+The Flutter app is the intended capture tool. It works **fully offline** throughout the event day:
 
-## Supabase sync (optional, internet only)
+1. Capture leads on the phone — form + card photos saved to local SQLite (`synced=0`).
+2. Press **Sync** when internet is available — each unsynced lead is posted to `/api/leads` one at a time; successes are marked `synced=1` and won't be re-sent.
+3. Failures stay `synced=0` and are retried on the next Sync press.
 
-Pushes leads as **rows** into a Supabase `leads` table and their card photos
-into a Storage bucket (image URLs saved on each row). One-directional
-(PC → cloud) and idempotent: re-syncing a lead **updates** its row (keyed on
-`id`), never duplicates.
-
-Setup:
-1. Run [`supabase-schema.sql`](supabase-schema.sql) in Supabase SQL Editor.
-2. Create a Storage bucket named `cards` (make it Public for openable URLs).
-3. Add to `.env`:
-   ```
-   SUPABASE_URL=https://xxxx.supabase.co
-   SUPABASE_SERVICE_KEY=...        # service_role key (Project Settings → API)
-   SUPABASE_BUCKET=cards           # optional, defaults to "cards"
-   ```
-
-When it runs:
-- **After each ✨ Enrich** — that lead is auto-pushed (you're already online).
-- **☁️ Sync all to Supabase** button — pushes every lead; catch-all for leads
-  that were never enriched (e.g. no photo). Safe to click repeatedly.
-
-Without the keys, sync is disabled and the button reports "not configured".
+Multiple phones can sync concurrently — each generates its own UUID locally, so upserts on the server never collide.
 
 ## Test
 
@@ -63,19 +46,10 @@ Without the keys, sync is disabled and the button reports "not configured".
 npm test    # node --test — covers phone normalization (the WhatsApp-critical bit)
 ```
 
-## v2 enrichment — OCR (when internet is back)
+## OCR enrichment (dashboard)
 
-Each lead with a card photo shows an **✨ Enrich** button on the dashboard. It
-sends the photo to **Gemini 2.5 Flash** (vision) and fills in any **blank**
-fields it can read — never overwriting what staff typed, never touching the
-phone number, skipping anything it can't read. See [ADR 0002](docs/adr/0002-defer-ocr-to-online-enrichment.md).
+Each lead with a card photo shows an **✨ Enrich** button on the dashboard. It sends the Supabase Storage photo URL to **Gemini 2.5 Flash** (vision) and fills in any **blank** fields it can read — never overwriting what staff typed, never touching the phone number, skipping anything it can't read. See [ADR 0002](docs/adr/0002-defer-ocr-to-online-enrichment.md).
 
-Enable it by creating a `.env` file (internet required; loaded automatically
-on `npm start`):
+OCR is deliberately decoupled from upload — Sync is fast and robust; Enrich runs as a separate bulk step on the dashboard when you're ready.
 
-```
-GOOGLE_API_KEY=...                 # Gemini key from Google AI Studio (required)
-OCR_MODEL=gemini-2.5-flash         # optional, this is the default
-```
-
-Without the key, Enrich returns "not configured" and changes nothing.
+Without `GOOGLE_API_KEY`, Enrich returns "not configured" and changes nothing.
