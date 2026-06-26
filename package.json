@@ -1,7 +1,7 @@
 {
   "name": "visitors-register",
   "version": "1.0.0",
-  "description": "Offline event lead capture: phones -> LAN PC -> dashboard -> WhatsApp follow-up",
+  "description": "Cloud event lead capture: Flutter app -> Supabase-backed server -> dashboard -> WhatsApp follow-up",
   "type": "commonjs",
   "main": "server.js",
   "scripts": {

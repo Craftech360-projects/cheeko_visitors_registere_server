@@ -9,3 +9,9 @@ Branch: feature/online-cloud-server
 - Task 4: rewrite server.js + csv columns — pending
 - Task 5: dashboard Storage URLs + drop Sync button — pending
 - Task 6: docs cleanup — pending
+Task 1: complete (commit 46fa4b9, schema file verified)
+Task 2: complete (commit 6b23cec, require check ok)
+Task 3: complete (commits ce12470..2e8cabd, review clean after enriched_at test fix; Minor: dataUrlToBuffer labels non-PNG as JPEG — matches brief, defer)
+Task 4: complete (commit 49e0767, 26/26 tests + node --check; review PASS; Minors: photo-fetch OOM swallow, enrichLead key guard, empty-template edge — all graceful, defer)
+Task 5: complete (commit 1a2950c, grep clean, ids quoted consistently)
+Task 6: complete (commit 1cf7c0b, docs cleanup)

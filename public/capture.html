@@ -185,20 +185,15 @@ function toast(msg, ok = true) {
 
 const val = id => document.getElementById(id).value;
 
-async function send(confirm) {
+async function send() {
   // Read by id explicitly — bare `name` would resolve to window.name, not the input.
   const body = {
     phone: val("phone"), name: val("name"), company: val("company"), email: val("email"),
     website: val("website"), city: val("city"), state: val("state"),
     products: val("products"), note: val("note"), tag: val("tag"),
-    frontPhoto: photos.front, backPhoto: photos.back, confirm,
+    frontPhoto: photos.front, backPhoto: photos.back,
   };
   const r = await fetch("/api/leads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (r.status === 409) {
-    if (confirm) return; // shouldn't happen
-    if (window.confirm("This number was already captured. Save anyway?")) return send(true);
-    return;
-  }
   if (r.status === 400) return toast("Enter a valid phone number", false);
   if (!r.ok) return toast("Save failed — try again", false);
   document.getElementById("f").reset();
@@ -210,7 +205,7 @@ async function send(confirm) {
   toast("Lead saved ✓");
 }
 
-document.getElementById("f").onsubmit = e => { e.preventDefault(); send(false); };
+document.getElementById("f").onsubmit = e => { e.preventDefault(); send(); };
 </script>
 </body>
 </html>
