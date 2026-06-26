@@ -20,6 +20,7 @@ test("buildUpsertRow keeps id/phone/wa_phone/created_at, drops blank optionals",
   assert.ok(!("name" in row));      // blank optional dropped
   assert.ok(!("note" in row));      // null optional dropped
   assert.ok(!("back_url" in row));  // null url dropped (preserves server value on re-upsert)
+  assert.ok(!("enriched_at" in row));  // server-owned; never set via upsert
 });
 
 test("dataUrlToBuffer decodes base64 and detects mime", () => {
