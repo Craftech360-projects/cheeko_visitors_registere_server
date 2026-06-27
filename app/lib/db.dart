@@ -40,6 +40,9 @@ class LeadDb {
   Future<void> markSynced(String id) async =>
       (await _database).update('leads', {'synced': 1}, where: 'id=?', whereArgs: [id]);
 
+  Future<void> delete(String id) async =>
+      (await _database).delete('leads', where: 'id=?', whereArgs: [id]);
+
   Future<bool> phoneExists(String phone) async =>
       (await _database).query('leads', where: 'phone=?', whereArgs: [phone], limit: 1).then((r) => r.isNotEmpty);
 

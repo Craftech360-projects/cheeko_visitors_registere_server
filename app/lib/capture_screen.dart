@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import 'db.dart';
 import 'lead.dart';
 import 'photos.dart';
 
 class CaptureScreen extends StatefulWidget {
-  const CaptureScreen({super.key});
+  const CaptureScreen({super.key, this.lead});
+  final Lead? lead;
   @override
   State<CaptureScreen> createState() => _CaptureScreenState();
 }
@@ -14,9 +16,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
   final _form = GlobalKey<FormState>();
   final _c = {for (final k in _fields) k: TextEditingController()};
   static const _fields = ['phone', 'name', 'company', 'email', 'website', 'city', 'state', 'products', 'note'];
-  final _id = const Uuid().v4(); // pre-allocate so photos share the lead id
+  late final String _id;
   String? _frontPath, _backPath;
   bool _saving = false;
+  String? _phoneError;
 
   static const _fieldIcons = {
     'phone': Icons.phone,
@@ -45,6 +48,21 @@ class _CaptureScreenState extends State<CaptureScreen> {
   @override
   void initState() {
     super.initState();
+    final l = widget.lead;
+    _id = l?.id ?? const Uuid().v4();
+    if (l != null) {
+      _c['phone']!.text = l.phone;
+      _c['name']!.text = l.name ?? '';
+      _c['company']!.text = l.company ?? '';
+      _c['email']!.text = l.email ?? '';
+      _c['website']!.text = l.website ?? '';
+      _c['city']!.text = l.city ?? '';
+      _c['state']!.text = l.state ?? '';
+      _c['products']!.text = l.products ?? '';
+      _c['note']!.text = l.note ?? '';
+      _frontPath = l.frontPath;
+      _backPath = l.backPath;
+    }
     for (final c in _c.values) { c.addListener(() => setState(() {})); }
   }
 
@@ -59,7 +77,8 @@ class _CaptureScreenState extends State<CaptureScreen> {
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
     final phone = _c['phone']!.text.trim();
-    if (await LeadDb.instance.phoneExists(phone) && mounted) {
+    final isNew = widget.lead == null;
+    if (isNew && await LeadDb.instance.phoneExists(phone) && mounted) {
       final go = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
@@ -78,9 +97,13 @@ class _CaptureScreenState extends State<CaptureScreen> {
       id: _id, phone: phone, name: _t('name'), company: _t('company'), email: _t('email'),
       website: _t('website'), city: _t('city'), state: _t('state'), products: _t('products'),
       note: _t('note'), frontPath: _frontPath, backPath: _backPath,
-      createdAt: DateTime.now().toUtc().toIso8601String(),
+      createdAt: widget.lead?.createdAt ?? DateTime.now().toUtc().toIso8601String(),
     );
-    await LeadDb.instance.insert(lead);
+    if (isNew) {
+      await LeadDb.instance.insert(lead);
+    } else {
+      await LeadDb.instance.update(lead);
+    }
     if (mounted) Navigator.pop(context, true);
   }
 
@@ -93,7 +116,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('New lead')),
+        appBar: AppBar(title: Text(widget.lead == null ? 'New lead' : 'Edit lead')),
         body: Form(
           key: _form,
           child: ListView(
@@ -102,10 +125,22 @@ class _CaptureScreenState extends State<CaptureScreen> {
               TextFormField(
                 controller: _c['phone'],
                 keyboardType: TextInputType.phone,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(
                   labelText: 'Phone',
                   prefixIcon: Icon(Icons.phone, color: _fieldIconColors['phone']),
+                  prefixText: '+91 ',
+                  errorText: _phoneError,
                 ),
+                onChanged: (v) {
+                  if (v.length > 10) {
+                    _c['phone']!.text = v.substring(0, 10);
+                    _c['phone']!.selection = const TextSelection.collapsed(offset: 10);
+                    setState(() => _phoneError = 'Phone number must be 10 digits');
+                  } else {
+                    setState(() => _phoneError = null);
+                  }
+                },
               ),
               for (final k in _fields.where((k) => k != 'phone'))
                 TextFormField(

@@ -92,35 +92,45 @@ class _LeadsScreenState extends State<LeadsScreen> {
                   final displayName = l.name?.isNotEmpty == true ? l.name! : l.phone;
                   return Card(
                     margin: const EdgeInsets.symmetric(vertical: 5),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: _avatarColor(l),
-                            child: Text(
-                              _initials(l),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                    clipBehavior: Clip.hardEdge,
+                    child: InkWell(
+                      onTap: () async {
+                        final updated = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(builder: (_) => CaptureScreen(lead: l)),
+                        );
+                        if (updated == true) _load();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: _avatarColor(l),
+                              child: Text(
+                                _initials(l),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                if (l.company?.isNotEmpty == true)
-                                  Text(l.company!, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                                Text(l.phone, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                              ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  if (l.company?.isNotEmpty == true)
+                                    Text(l.company!, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                                  Text(l.phone, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                                ],
+                              ),
                             ),
-                          ),
-                          Icon(l.synced == 1 ? Icons.cloud_done : Icons.cloud_off,
-                              color: l.synced == 1 ? Colors.green : Colors.grey),
-                        ],
+                            Icon(l.synced == 1 ? Icons.cloud_done : Icons.cloud_off,
+                                color: l.synced == 1 ? Colors.green : Colors.grey),
+                          ],
+                        ),
                       ),
                     ),
                   );
