@@ -31,6 +31,29 @@ class _LeadsScreenState extends State<LeadsScreen> {
   void initState() { super.initState(); _load(); }
   Future<void> _load() async { _leads = await LeadDb.instance.all(); if (mounted) setState(() {}); }
 
+  String _initials(Lead l) {
+    final name = l.name?.isNotEmpty == true ? l.name! : l.phone;
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+
+  static const _avatarPalette = [
+    Color(0xFFE57373), // red
+    Color(0xFF64B5F6), // blue
+    Color(0xFF81C784), // green
+    Color(0xFFFFB74D), // orange
+    Color(0xFFBA68C8), // purple
+    Color(0xFF4DB6AC), // teal
+    Color(0xFFF06292), // pink
+    Color(0xFF90A4AE), // blue-grey
+  ];
+
+  Color _avatarColor(Lead l) {
+    final name = l.name?.isNotEmpty == true ? l.name! : l.phone;
+    return _avatarPalette[name.codeUnitAt(0) % _avatarPalette.length];
+  }
+
   Future<void> _sync() async {
     setState(() => _syncing = true);
     final r = await syncAll(onProgress: (d, t) {});
@@ -60,16 +83,45 @@ class _LeadsScreenState extends State<LeadsScreen> {
         onRefresh: _load,
         child: _leads.isEmpty
             ? const Center(child: Text('No leads yet. Tap + to add one.'))
-            : ListView.separated(
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 itemCount: _leads.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (_, i) {
                   final l = _leads[i];
-                  return ListTile(
-                    title: Text(l.name?.isNotEmpty == true ? l.name! : l.phone),
-                    subtitle: Text([l.company, l.phone].where((s) => s?.isNotEmpty == true).join(' · ')),
-                    trailing: Icon(l.synced == 1 ? Icons.cloud_done : Icons.cloud_off,
-                        color: l.synced == 1 ? Colors.green : Colors.grey),
+                  final displayName = l.name?.isNotEmpty == true ? l.name! : l.phone;
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 5),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: _avatarColor(l),
+                            child: Text(
+                              _initials(l),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                if (l.company?.isNotEmpty == true)
+                                  Text(l.company!, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                                Text(l.phone, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                          Icon(l.synced == 1 ? Icons.cloud_done : Icons.cloud_off,
+                              color: l.synced == 1 ? Colors.green : Colors.grey),
+                        ],
+                      ),
+                    ),
                   );
                 },
               ),

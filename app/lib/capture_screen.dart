@@ -18,6 +18,30 @@ class _CaptureScreenState extends State<CaptureScreen> {
   String? _frontPath, _backPath;
   bool _saving = false;
 
+  static const _fieldIcons = {
+    'phone': Icons.phone,
+    'name': Icons.person,
+    'company': Icons.business,
+    'email': Icons.email,
+    'website': Icons.language,
+    'city': Icons.location_city,
+    'state': Icons.map,
+    'products': Icons.inventory_2,
+    'note': Icons.notes,
+  };
+
+  static const _fieldIconColors = {
+    'phone': Color(0xFF4CAF50),
+    'name': Color(0xFF2196F3),
+    'company': Color(0xFFFF9800),
+    'email': Color(0xFFE91E63),
+    'website': Color(0xFF9C27B0),
+    'city': Color(0xFF00BCD4),
+    'state': Color(0xFF009688),
+    'products': Color(0xFFFF5722),
+    'note': Color(0xFF795548),
+  };
+
   @override
   void dispose() { for (final c in _c.values) { c.dispose(); } super.dispose(); }
 
@@ -67,11 +91,20 @@ class _CaptureScreenState extends State<CaptureScreen> {
               TextFormField(
                 controller: _c['phone'],
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone *'),
+                decoration: InputDecoration(
+                  labelText: 'Phone *',
+                  prefixIcon: Icon(Icons.phone, color: _fieldIconColors['phone']),
+                ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Phone is required' : null,
               ),
               for (final k in _fields.where((k) => k != 'phone'))
-                TextFormField(controller: _c[k], decoration: InputDecoration(labelText: k[0].toUpperCase() + k.substring(1))),
+                TextFormField(
+                  controller: _c[k],
+                  decoration: InputDecoration(
+                    labelText: k[0].toUpperCase() + k.substring(1),
+                    prefixIcon: Icon(_fieldIcons[k], color: _fieldIconColors[k]),
+                  ),
+                ),
               const SizedBox(height: 12),
               Row(children: [
                 Expanded(child: OutlinedButton.icon(onPressed: () => _shoot('front'), icon: const Icon(Icons.camera_alt), label: Text(_frontPath == null ? 'Front photo' : 'Front ✓'))),
