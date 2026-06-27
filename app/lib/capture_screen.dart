@@ -114,6 +114,11 @@ class _CaptureScreenState extends State<CaptureScreen> {
       _frontPath != null ||
       _backPath != null;
 
+  bool get _phoneValid {
+    final phone = _c['phone']!.text.trim();
+    return phone.isEmpty || phone.length == 10;
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: Text(widget.lead == null ? 'New lead' : 'Edit lead')),
@@ -122,25 +127,35 @@ class _CaptureScreenState extends State<CaptureScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              TextFormField(
-                controller: _c['phone'],
-                keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(
-                  labelText: 'Phone',
-                  prefixIcon: Icon(Icons.phone, color: _fieldIconColors['phone']),
-                  prefixText: '+91 ',
-                  errorText: _phoneError,
-                ),
-                onChanged: (v) {
-                  if (v.length > 10) {
-                    _c['phone']!.text = v.substring(0, 10);
-                    _c['phone']!.selection = const TextSelection.collapsed(offset: 10);
-                    setState(() => _phoneError = 'Phone number must be 10 digits');
-                  } else {
-                    setState(() => _phoneError = null);
+              Focus(
+                onFocusChange: (hasFocus) {
+                  if (!hasFocus) {
+                    final phone = _c['phone']!.text.trim();
+                    if (phone.isNotEmpty && phone.length < 10) {
+                      setState(() => _phoneError = 'Please enter 10 digits');
+                    }
                   }
                 },
+                child: TextFormField(
+                  controller: _c['phone'],
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    labelText: 'Phone',
+                    prefixIcon: Icon(Icons.phone, color: _fieldIconColors['phone']),
+                    prefixText: '+91 ',
+                    errorText: _phoneError,
+                  ),
+                  onChanged: (v) {
+                    if (v.length > 10) {
+                      _c['phone']!.text = v.substring(0, 10);
+                      _c['phone']!.selection = const TextSelection.collapsed(offset: 10);
+                      setState(() => _phoneError = 'Phone number must be 10 digits');
+                    } else {
+                      setState(() => _phoneError = null);
+                    }
+                  },
+                ),
               ),
               for (final k in _fields.where((k) => k != 'phone'))
                 TextFormField(
@@ -157,7 +172,33 @@ class _CaptureScreenState extends State<CaptureScreen> {
                 Expanded(child: OutlinedButton.icon(onPressed: () => _shoot('back'), icon: const Icon(Icons.camera_alt), label: Text(_backPath == null ? 'Back photo' : 'Back ✓'))),
               ]),
               const SizedBox(height: 16),
-              FilledButton(onPressed: (_saving || !_hasAnyInput) ? null : _save, child: Text(_saving ? 'Saving…' : 'Save lead')),
+              FilledButton(onPressed: (_saving || !_hasAnyInput || !_phoneValid) ? null : _save, child: Text(_saving ? 'Saving…' : 'Save lead')),
+              if (widget.lead != null) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final navigator = Navigator.of(context);
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('Delete lead'),
+                        content: const Text('This will permanently delete this lead. Continue?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                        ],
+                      ),
+                    );
+                    if (confirm == true && mounted) {
+                      await LeadDb.instance.delete(widget.lead!.id);
+                      navigator.pop(true);
+                    }
+                  },
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  label: const Text('Delete lead', style: TextStyle(color: Colors.red)),
+                  style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red)),
+                ),
+              ]
             ],
           ),
         ),
