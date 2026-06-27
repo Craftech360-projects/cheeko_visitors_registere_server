@@ -43,6 +43,12 @@ class _CaptureScreenState extends State<CaptureScreen> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    for (final c in _c.values) { c.addListener(() => setState(() {})); }
+  }
+
+  @override
   void dispose() { for (final c in _c.values) { c.dispose(); } super.dispose(); }
 
   Future<void> _shoot(String side) async {
@@ -80,6 +86,11 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   String? _t(String k) => _c[k]!.text.trim().isEmpty ? null : _c[k]!.text.trim();
 
+  bool get _hasAnyInput =>
+      _fields.any((k) => _c[k]!.text.trim().isNotEmpty) ||
+      _frontPath != null ||
+      _backPath != null;
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('New lead')),
@@ -92,10 +103,9 @@ class _CaptureScreenState extends State<CaptureScreen> {
                 controller: _c['phone'],
                 keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
-                  labelText: 'Phone *',
+                  labelText: 'Phone',
                   prefixIcon: Icon(Icons.phone, color: _fieldIconColors['phone']),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Phone is required' : null,
               ),
               for (final k in _fields.where((k) => k != 'phone'))
                 TextFormField(
@@ -112,7 +122,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
                 Expanded(child: OutlinedButton.icon(onPressed: () => _shoot('back'), icon: const Icon(Icons.camera_alt), label: Text(_backPath == null ? 'Back photo' : 'Back ✓'))),
               ]),
               const SizedBox(height: 16),
-              FilledButton(onPressed: _saving ? null : _save, child: Text(_saving ? 'Saving…' : 'Save lead')),
+              FilledButton(onPressed: (_saving || !_hasAnyInput) ? null : _save, child: Text(_saving ? 'Saving…' : 'Save lead')),
             ],
           ),
         ),

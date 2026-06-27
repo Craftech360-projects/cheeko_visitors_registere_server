@@ -51,6 +51,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
 
   Color _avatarColor(Lead l) {
     final name = l.name?.isNotEmpty == true ? l.name! : l.phone;
+    if (name.isEmpty) return _avatarPalette[0];
     return _avatarPalette[name.codeUnitAt(0) % _avatarPalette.length];
   }
 
