@@ -11,7 +11,7 @@ class App extends StatelessWidget {
   const App({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'Visitors Capture',
+        title: 'LeadSnap',
         theme: ThemeData(colorSchemeSeed: const Color(0xFFE96B2C), useMaterial3: true),
         home: const LeadsScreen(),
       );

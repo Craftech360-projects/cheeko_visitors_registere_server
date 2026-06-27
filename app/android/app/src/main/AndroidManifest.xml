@@ -2,7 +2,7 @@
     <!-- Sync uploads leads over HTTP to the droplet. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="visitors_capture"
+        android:label="LeadSnap"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
