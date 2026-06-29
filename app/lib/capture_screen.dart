@@ -18,6 +18,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
   static const _fields = ['phone', 'name', 'company', 'email', 'website', 'city', 'state', 'products', 'note'];
   late final String _id;
   String? _frontPath, _backPath;
+  String? _tag;
   bool _saving = false;
   String? _phoneError;
 
@@ -62,6 +63,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
       _c['note']!.text = l.note ?? '';
       _frontPath = l.frontPath;
       _backPath = l.backPath;
+      _tag = l.tag;
     }
     for (final c in _c.values) { c.addListener(() => setState(() {})); }
   }
@@ -96,7 +98,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
     final lead = Lead(
       id: _id, phone: phone, name: _t('name'), company: _t('company'), email: _t('email'),
       website: _t('website'), city: _t('city'), state: _t('state'), products: _t('products'),
-      note: _t('note'), frontPath: _frontPath, backPath: _backPath,
+      note: _t('note'), tag: _tag, frontPath: _frontPath, backPath: _backPath,
       createdAt: widget.lead?.createdAt ?? DateTime.now().toUtc().toIso8601String(),
     );
     if (isNew) {
@@ -170,6 +172,35 @@ class _CaptureScreenState extends State<CaptureScreen> {
                 Expanded(child: OutlinedButton.icon(onPressed: () => _shoot('front'), icon: const Icon(Icons.camera_alt), label: Text(_frontPath == null ? 'Front photo' : 'Front ✓'))),
                 const SizedBox(width: 8),
                 Expanded(child: OutlinedButton.icon(onPressed: () => _shoot('back'), icon: const Icon(Icons.camera_alt), label: Text(_backPath == null ? 'Back photo' : 'Back ✓'))),
+              ]),
+              const SizedBox(height: 16),
+              const Text('Priority', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF4b5563))),
+              const SizedBox(height: 8),
+              Row(children: [
+                for (final opt in [('hot', '🔴 Hot', Color(0xFFFA5252), Color(0xFFFFF0F0), Color(0xFFC92A2A)),
+                                   ('warm', '🟡 Warm', Color(0xFFF59F00), Color(0xFFFFF8EC), Color(0xFF8E4B0A)),
+                                   ('cold', '🟢 Cold', Color(0xFF40C057), Color(0xFFEBFBF0), Color(0xFF0B7A5E))])
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: GestureDetector(
+                        onTap: () => setState(() => _tag = _tag == opt.$1 ? null : opt.$1),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _tag == opt.$1 ? opt.$4 : Colors.white,
+                            border: Border.all(color: _tag == opt.$1 ? opt.$3 : const Color(0xFFE2E5EA), width: 1.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(opt.$2,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                                  color: _tag == opt.$1 ? opt.$5 : const Color(0xFF4b5563))),
+                        ),
+                      ),
+                    ),
+                  ),
               ]),
               const SizedBox(height: 16),
               FilledButton(onPressed: (_saving || !_hasAnyInput || !_phoneValid) ? null : _save, child: Text(_saving ? 'Saving…' : 'Save lead')),

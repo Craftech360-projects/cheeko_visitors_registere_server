@@ -220,12 +220,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final total   = _leads.length;
-    final hot     = _leads.where((l) => l.tag == 'hot').length;
-    final warm    = _leads.where((l) => l.tag == 'warm').length;
-    final cold    = _leads.where((l) => l.tag == 'cold').length;
-    final synced  = _leads.where((l) => l.synced == 1).length;
-    final pending = _leads.where((l) => l.synced == 0).length;
+    final total    = _leads.length;
+    final hot      = _leads.where((l) => l.tag == 'hot').length;
+    final warm     = _leads.where((l) => l.tag == 'warm').length;
+    final cold     = _leads.where((l) => l.tag == 'cold').length;
+    final enriched = _leads.where((l) => l.enrichedAt != null).length;
+    final pending  = _leads.where((l) => l.enrichedAt == null).length;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -251,9 +251,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _sectionLabel('Overview'),
             const SizedBox(height: 8),
             Row(children: [
-              _MetricCard(label: 'Total',    value: total,   valueColor: _accent),
-              _MetricCard(label: 'Synced ✓', value: synced,  valueColor: const Color(0xFF3F7A1E)),
-              _MetricCard(label: 'Pending',  value: pending, valueColor: _accentInk),
+              _MetricCard(label: 'Total',      value: total,    valueColor: _accent),
+              _MetricCard(label: 'Enriched ✨', value: enriched, valueColor: const Color(0xFF3F7A1E)),
+              _MetricCard(label: 'Pending ✨',  value: pending,  valueColor: _accentInk),
             ]),
             const SizedBox(height: 14),
             _sectionLabel('Priority'),
