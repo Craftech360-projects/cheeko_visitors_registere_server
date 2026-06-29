@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'capture_screen.dart';
+import 'dashboard_screen.dart';
 import 'db.dart';
 import 'lead.dart';
 import 'settings_screen.dart';
@@ -13,7 +14,33 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
         title: 'LeadSnap',
         theme: ThemeData(colorSchemeSeed: const Color(0xFFE96B2C), useMaterial3: true),
-        home: const LeadsScreen(),
+        home: const HomeShell(),
+      );
+}
+
+class HomeShell extends StatefulWidget {
+  const HomeShell({super.key});
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: IndexedStack(
+          index: _index,
+          children: const [LeadsScreen(), DashboardScreen()],
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _index,
+          onTap: (i) => setState(() => _index = i),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Leads'),
+            BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+          ],
+        ),
       );
 }
 
@@ -72,7 +99,15 @@ class _LeadsScreenState extends State<LeadsScreen> {
     final pending = _leads.where((l) => l.synced == 0).length;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Leads'),
+        backgroundColor: const Color(0xFFFAF7F2),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('Leads',
+            style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF1C1C1C), fontSize: 18)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFECE5DB)),
+        ),
         actions: [
           IconButton(icon: const Icon(Icons.settings), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsScreen()))),
           _syncing

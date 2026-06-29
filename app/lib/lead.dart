@@ -6,12 +6,13 @@ class Lead {
   final String? name, company, email, website, city, state, products, note, tag;
   final String? frontPath, backPath;
   final String createdAt;
+  final String? enrichedAt;
   final int synced;
 
   Lead({
     required this.id, required this.phone, this.name, this.company, this.email,
     this.website, this.city, this.state, this.products, this.note, this.tag,
-    this.frontPath, this.backPath, required this.createdAt, this.synced = 0,
+    this.frontPath, this.backPath, required this.createdAt, this.enrichedAt, this.synced = 0,
   });
 
   factory Lead.create({
@@ -55,6 +56,8 @@ class Lead {
         state: m['state'] as String?, products: m['products'] as String?,
         note: m['note'] as String?, tag: m['tag'] as String?,
         frontPath: m['front_path'] as String?, backPath: m['back_path'] as String?,
-        createdAt: m['created_at'] as String, synced: (m['synced'] as int?) ?? 0,
+        createdAt: m['created_at'] as String,
+        enrichedAt: m['enriched_at'] as String?,
+        synced: (m['synced'] as int?) ?? 0,
       );
 }
