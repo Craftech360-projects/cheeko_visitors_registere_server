@@ -50,7 +50,7 @@ class Lead {
       };
 
   factory Lead.fromMap(Map<String, Object?> m) => Lead(
-        id: m['id'] as String, phone: m['phone'] as String, name: m['name'] as String?,
+        id: m['id'] as String, phone: (m['phone'] as String?) ?? '', name: m['name'] as String?,
         company: m['company'] as String?, email: m['email'] as String?,
         website: m['website'] as String?, city: m['city'] as String?,
         state: m['state'] as String?, products: m['products'] as String?,

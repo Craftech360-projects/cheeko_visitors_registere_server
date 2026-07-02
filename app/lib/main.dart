@@ -31,7 +31,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) => Scaffold(
         body: IndexedStack(
           index: _index,
-          children: const [LeadsScreen(), DashboardScreen()],
+          children: [const LeadsScreen(), DashboardScreen(active: _index == 1)],
         ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _index,

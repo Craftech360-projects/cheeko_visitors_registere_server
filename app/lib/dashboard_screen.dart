@@ -1,15 +1,20 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import 'config.dart';
-import 'db.dart';
 import 'lead.dart';
 import 'lead_detail_screen.dart';
 import 'sync.dart';
+
+const _pollInterval = Duration(seconds: 15);
 
 // ── Design tokens
 const _bg = Color(0xFFFAF7F2);
@@ -23,17 +28,22 @@ const _accentInk = Color(0xFFCF5A1F);
 const _accentTint = Color(0xFFFFE8DA);
 
 Color _tagColor(String? tag) => switch (tag) {
-      'hot'  => const Color(0xFFC2410C),
-      'warm' => const Color(0xFF9A6410),
-      'cold' => const Color(0xFF3F7A1E),
-      _      => _accent,
-    };
+  'hot' => const Color(0xFFC2410C),
+  'warm' => const Color(0xFF9A6410),
+  'cold' => const Color(0xFF3F7A1E),
+  _ => _accent,
+};
 
 // Avatar helpers (matches Leads tab)
 const _palette = [
-  Color(0xFFE57373), Color(0xFF64B5F6), Color(0xFF81C784),
-  Color(0xFFFFB74D), Color(0xFFBA68C8), Color(0xFF4DB6AC),
-  Color(0xFFF06292), Color(0xFF90A4AE),
+  Color(0xFFE57373),
+  Color(0xFF64B5F6),
+  Color(0xFF81C784),
+  Color(0xFFFFB74D),
+  Color(0xFFBA68C8),
+  Color(0xFF4DB6AC),
+  Color(0xFFF06292),
+  Color(0xFF90A4AE),
 ];
 
 String _initials(Lead l) {
@@ -50,7 +60,8 @@ Color _avatarColor(Lead l) {
 }
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final bool active;
+  const DashboardScreen({super.key, required this.active});
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -59,26 +70,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Lead> _leads = [];
   String _searchQuery = '';
   String _filterTag = '';
+  bool _serverDown = false;
   final _searchCtrl = TextEditingController();
+  Timer? _pollTimer;
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+    _pollTimer = Timer.periodic(_pollInterval, (_) => _load());
+  }
 
   @override
-  void dispose() { _searchCtrl.dispose(); super.dispose(); }
+  void didUpdateWidget(DashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) _load();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _load() async {
     try {
       final res = await http.get(Uri.parse('${Config.serverUrl}/api/leads'));
       if (res.statusCode == 200) {
         final list = jsonDecode(res.body) as List<dynamic>;
-        _leads = list.map((m) => Lead.fromMap(Map<String, Object?>.from(m as Map))).toList();
-        if (mounted) setState(() {});
-        return;
+        final leads = <Lead>[];
+        var skipped = 0;
+        for (final m in list) {
+          try {
+            leads.add(Lead.fromMap(Map<String, Object?>.from(m as Map)));
+          } catch (e) {
+            skipped++;
+            developer.log('skipped malformed lead: $e', name: 'Dashboard', level: 900);
+          }
+        }
+        _leads = leads;
+        _serverDown = false;
+        developer.log('fetched ${_leads.length} leads${skipped > 0 ? ' ($skipped skipped)' : ''}', name: 'Dashboard');
+      } else {
+        _serverDown = true;
+        developer.log('fetch failed: HTTP ${res.statusCode}', name: 'Dashboard', level: 900);
       }
-    } catch (_) {}
-    // fallback to local DB if server unreachable
-    _leads = await LeadDb.instance.all();
+    } catch (e, st) {
+      _serverDown = true;
+      developer.log('fetch error', name: 'Dashboard', level: 1000, error: e, stackTrace: st);
+    }
     if (mounted) setState(() {});
   }
 
@@ -86,7 +127,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final q = _searchQuery.toLowerCase();
     return _leads.where((l) {
       final matchesTag = _filterTag.isEmpty || l.tag == _filterTag;
-      final matchesSearch = q.isEmpty ||
+      final matchesSearch =
+          q.isEmpty ||
           (l.name ?? '').toLowerCase().contains(q) ||
           (l.company ?? '').toLowerCase().contains(q) ||
           l.phone.toLowerCase().contains(q);
@@ -98,14 +140,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        backgroundColor: _surface,
-        content: Row(children: [
-          CircularProgressIndicator(),
-          SizedBox(width: 16),
-          Expanded(child: Text('Syncing & enriching leads…')),
-        ]),
-      ),
+      builder:
+          (_) => const AlertDialog(
+            backgroundColor: _surface,
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Expanded(child: Text('Syncing & enriching leads…')),
+              ],
+            ),
+          ),
     );
     try {
       await syncAll();
@@ -118,41 +163,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final total = data['total'] as int;
         showDialog(
           context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: _surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            title: const Text('✨ Done', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
-            content: Text(
-              total == 0
-                  ? 'No pending leads to enrich.\nSync leads with card photos first.'
-                  : '$enriched of $total lead${total == 1 ? '' : 's'} enriched.',
-              style: const TextStyle(color: _ink2, fontSize: 13),
-            ),
-            actions: [TextButton(
-              onPressed: () { Navigator.pop(ctx); _load(); },
-              child: Text('OK', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)),
-            )],
-          ),
+          builder:
+              (ctx) => AlertDialog(
+                backgroundColor: _surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                title: const Text('✨ Done', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
+                content: Text(
+                  total == 0
+                      ? 'No pending leads to enrich.\nSync leads with card photos first.'
+                      : '$enriched of $total lead${total == 1 ? '' : 's'} enriched.',
+                  style: const TextStyle(color: _ink2, fontSize: 13),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _load();
+                    },
+                    child: Text('OK', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)),
+                  ),
+                ],
+              ),
         );
       } else {
         showDialog(
           context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: _surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            title: const Text('Failed', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
-            content: Text('Server error ${res.statusCode}', style: const TextStyle(color: _ink2, fontSize: 13)),
-            actions: [TextButton(onPressed: () => Navigator.pop(ctx),
-                child: Text('OK', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)))],
-          ),
+          builder:
+              (ctx) => AlertDialog(
+                backgroundColor: _surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                title: const Text('Failed', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
+                content: Text('Server error ${res.statusCode}', style: const TextStyle(color: _ink2, fontSize: 13)),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text('OK', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)),
+                  ),
+                ],
+              ),
         );
       }
     } catch (_) {
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enrich failed. Check your connection.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Enrich failed. Check your connection.')));
       }
     }
   }
@@ -160,29 +216,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _exportCsv(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: _surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Download file?', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
-        content: const Text('leads_export.csv\nSource: 157.245.108.139:8080',
-            style: TextStyle(color: _ink2, fontSize: 13)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Download', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)),
+      builder:
+          (ctx) => AlertDialog(
+            backgroundColor: _surface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            title: const Text('Download file?', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
+            content: const Text(
+              'leads_export.csv\nSource: 64.227.170.31:8080',
+              style: TextStyle(color: _ink2, fontSize: 13),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text('Download', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)),
+              ),
+            ],
           ),
-        ],
-      ),
     );
     if (confirmed != true || !context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Downloading…'), duration: Duration(seconds: 60)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Downloading…'), duration: Duration(seconds: 60)));
 
     try {
-      final response = await http.get(Uri.parse('http://157.245.108.139:8080/export.csv'));
+      final response = await http.get(Uri.parse('http://64.227.170.31:8080/export.csv'));
       final dir = Directory('/storage/emulated/0/Download');
       if (!await dir.exists()) await dir.create(recursive: true);
       await File('${dir.path}/leads_export.csv').writeAsBytes(response.bodyBytes);
@@ -192,40 +251,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final filePath = '${dir.path}/leads_export.csv';
         showDialog(
           context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: _surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            title: const Text('Downloaded!', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
-            content: const Text('leads_export.csv saved to Downloads.\nOpen it now?',
-                style: TextStyle(color: _ink2, fontSize: 13)),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-              TextButton(
-                onPressed: () { Navigator.pop(ctx); OpenFile.open(filePath); },
-                child: Text('Open file', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)),
+          builder:
+              (ctx) => AlertDialog(
+                backgroundColor: _surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                title: const Text('Downloaded!', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
+                content: const Text(
+                  'leads_export.csv saved to Downloads.\nOpen it now?',
+                  style: TextStyle(color: _ink2, fontSize: 13),
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      OpenFile.open(filePath);
+                    },
+                    child: Text('Open file', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)),
+                  ),
+                ],
               ),
-            ],
-          ),
         );
       }
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Download failed. Check connection.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Download failed. Check connection.')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final total    = _leads.length;
-    final hot      = _leads.where((l) => l.tag == 'hot').length;
-    final warm     = _leads.where((l) => l.tag == 'warm').length;
-    final cold     = _leads.where((l) => l.tag == 'cold').length;
+    final total = _leads.length;
+    final hot = _leads.where((l) => l.tag == 'hot').length;
+    final warm = _leads.where((l) => l.tag == 'warm').length;
+    final cold = _leads.where((l) => l.tag == 'cold').length;
     final enriched = _leads.where((l) => l.enrichedAt != null).length;
-    final pending  = _leads.where((l) => l.enrichedAt == null).length;
+    final pending = _leads.where((l) => l.enrichedAt == null).length;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -233,12 +296,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: _bg,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Leads Dashboard',
-            style: TextStyle(fontWeight: FontWeight.w800, color: _ink, fontSize: 18)),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: _border),
-        ),
+        title: const Text('Leads Dashboard', style: TextStyle(fontWeight: FontWeight.w800, color: _ink, fontSize: 18)),
+        bottom: PreferredSize(preferredSize: const Size.fromHeight(1), child: Container(height: 1, color: _border)),
       ),
       body: RefreshIndicator(
         color: _accent,
@@ -246,23 +305,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 32),
           children: [
+            if (_serverDown) ...[const _ServerDownBanner(), const SizedBox(height: 10)],
             const _Banner(),
             const SizedBox(height: 14),
             _sectionLabel('Overview'),
             const SizedBox(height: 8),
-            Row(children: [
-              _MetricCard(label: 'Total',      value: total,    valueColor: _accent),
-              _MetricCard(label: 'Enriched ✨', value: enriched, valueColor: const Color(0xFF3F7A1E)),
-              _MetricCard(label: 'Pending ✨',  value: pending,  valueColor: _accentInk),
-            ]),
+            Row(
+              children: [
+                _MetricCard(label: 'Total', value: total, valueColor: _accent),
+                _MetricCard(label: 'Enriched ✨', value: enriched, valueColor: const Color(0xFF3F7A1E)),
+                _MetricCard(label: 'Pending ✨', value: pending, valueColor: _accentInk),
+              ],
+            ),
             const SizedBox(height: 14),
             _sectionLabel('Priority'),
             const SizedBox(height: 8),
-            Row(children: [
-              _MetricCard(label: 'Hot 🔴',  value: hot,  valueColor: const Color(0xFFC2410C)),
-              _MetricCard(label: 'Warm 🟡', value: warm, valueColor: const Color(0xFF9A6410)),
-              _MetricCard(label: 'Cold 🟢', value: cold, valueColor: const Color(0xFF3F7A1E)),
-            ]),
+            Row(
+              children: [
+                _MetricCard(label: 'Hot 🔴', value: hot, valueColor: const Color(0xFFC2410C)),
+                _MetricCard(label: 'Warm 🟡', value: warm, valueColor: const Color(0xFF9A6410)),
+                _MetricCard(label: 'Cold 🟢', value: cold, valueColor: const Color(0xFF3F7A1E)),
+              ],
+            ),
             const SizedBox(height: 20),
             _ToolsBar(
               controller: _searchCtrl,
@@ -275,7 +339,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 12),
             _sectionLabel('${_filtered.length} Lead${_filtered.length == 1 ? '' : 's'}'),
             const SizedBox(height: 8),
-            _LeadsList(leads: _filtered),
+            _LeadsList(leads: _filtered, onEnriched: _load),
           ],
         ),
       ),
@@ -283,9 +347,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _sectionLabel(String text) => Text(
-        text.toUpperCase(),
-        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _ink3, letterSpacing: 0.8),
-      );
+    text.toUpperCase(),
+    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _ink3, letterSpacing: 0.8),
+  );
+}
+
+// ── Server down banner
+class _ServerDownBanner extends StatelessWidget {
+  const _ServerDownBanner();
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFE6E0),
+      border: Border.all(color: const Color(0xFFC2410C).withValues(alpha: 0.3)),
+      borderRadius: BorderRadius.circular(13),
+    ),
+    child: const Row(
+      children: [
+        Icon(Icons.cloud_off, color: Color(0xFFC2410C), size: 18),
+        SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Server unreachable — showing last loaded data.',
+            style: TextStyle(color: Color(0xFFC2410C), fontWeight: FontWeight.w700, fontSize: 12.5),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 // ── Banner
@@ -293,49 +383,49 @@ class _Banner extends StatelessWidget {
   const _Banner();
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Colors.white, _accentTint],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(color: _border),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: IntrinsicHeight(
-            child: Row(children: [
-              Container(
-                width: 5,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFFF8A3D), _accent],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [Colors.white, _accentTint],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      border: Border.all(color: _border),
+      borderRadius: BorderRadius.circular(18),
+      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Container(
+              width: 5,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFF8A3D), _accent],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('🎯 Captured Leads',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink)),
-                      SizedBox(height: 3),
-                      Text('Leads collected at the stall',
-                          style: TextStyle(fontSize: 12, color: _ink2)),
-                    ],
-                  ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text('🎯 Captured Leads', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink)),
+                    SizedBox(height: 3),
+                    Text('Leads collected at the stall', style: TextStyle(fontSize: 12, color: _ink2)),
+                  ],
                 ),
               ),
-            ]),
-          ),
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 // ── Metric card — Style A: white card + colored left accent strip
@@ -347,39 +437,54 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 3),
-          child: Container(
-            decoration: BoxDecoration(
-              color: _surface,
-              border: Border.all(color: _border),
-              borderRadius: BorderRadius.circular(13),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 1))],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(13),
-              child: IntrinsicHeight(
-                child: Row(children: [
-                  Container(width: 4, color: valueColor.withValues(alpha: 0.35)),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
-                      child: Column(children: [
-                        Text('$value',
-                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: valueColor, height: 1.1)),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _surface,
+          border: Border.all(color: _border),
+          borderRadius: BorderRadius.circular(13),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 1)),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(13),
+          child: IntrinsicHeight(
+            child: Row(
+              children: [
+                Container(width: 4, color: valueColor.withValues(alpha: 0.35)),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+                    child: Column(
+                      children: [
+                        Text(
+                          '$value',
+                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: valueColor, height: 1.1),
+                        ),
                         const SizedBox(height: 4),
-                        Text(label.toUpperCase(),
-                            style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.w800, color: _ink3, letterSpacing: 0.4),
-                            textAlign: TextAlign.center),
-                      ]),
+                        Text(
+                          label.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            color: _ink3,
+                            letterSpacing: 0.4,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   ),
-                ]),
-              ),
+                ),
+              ],
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 // ── Tools bar
@@ -390,16 +495,26 @@ class _ToolsBar extends StatelessWidget {
   final ValueChanged<String> onFilter;
   final VoidCallback onExport;
   final VoidCallback onEnrich;
-  const _ToolsBar({required this.controller, required this.filterTag, required this.onSearch, required this.onFilter, required this.onExport, required this.onEnrich});
+  const _ToolsBar({
+    required this.controller,
+    required this.filterTag,
+    required this.onSearch,
+    required this.onFilter,
+    required this.onExport,
+    required this.onEnrich,
+  });
 
   @override
-  Widget build(BuildContext context) => Column(children: [
-        Row(children: [
+  Widget build(BuildContext context) => Column(
+    children: [
+      Row(
+        children: [
           Expanded(
             child: Container(
               height: 42,
               decoration: BoxDecoration(
-                color: _surface, border: Border.all(color: _border),
+                color: _surface,
+                border: Border.all(color: _border),
                 borderRadius: BorderRadius.circular(13),
                 boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4)],
               ),
@@ -422,7 +537,8 @@ class _ToolsBar extends StatelessWidget {
             height: 42,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              color: _surface, border: Border.all(color: _border),
+              color: _surface,
+              border: Border.all(color: _border),
               borderRadius: BorderRadius.circular(13),
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4)],
             ),
@@ -441,9 +557,11 @@ class _ToolsBar extends StatelessWidget {
               ),
             ),
           ),
-        ]),
-        const SizedBox(height: 8),
-        Row(children: [
+        ],
+      ),
+      const SizedBox(height: 8),
+      Row(
+        children: [
           Expanded(
             child: GestureDetector(
               onTap: onExport,
@@ -452,13 +570,21 @@ class _ToolsBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: _accent,
                   borderRadius: BorderRadius.circular(9999),
-                  boxShadow: [BoxShadow(color: _accent.withValues(alpha: 0.32), blurRadius: 14, offset: const Offset(0, 4))],
+                  boxShadow: [
+                    BoxShadow(color: _accent.withValues(alpha: 0.32), blurRadius: 14, offset: const Offset(0, 4)),
+                  ],
                 ),
-                child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.download, color: Colors.white, size: 16),
-                  SizedBox(width: 6),
-                  Text('Export CSV', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
-                ]),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.download, color: Colors.white, size: 16),
+                    SizedBox(width: 6),
+                    Text(
+                      'Export CSV',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -471,25 +597,39 @@ class _ToolsBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFF5F3DC4),
                   borderRadius: BorderRadius.circular(9999),
-                  boxShadow: [BoxShadow(color: const Color(0xFF5F3DC4).withValues(alpha: 0.32), blurRadius: 14, offset: const Offset(0, 4))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF5F3DC4).withValues(alpha: 0.32),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text('✨', style: TextStyle(fontSize: 14)),
-                  SizedBox(width: 6),
-                  Text('Enrich all pending',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
-                ]),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('✨', style: TextStyle(fontSize: 14)),
+                    SizedBox(width: 6),
+                    Text(
+                      'Enrich all pending',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ]),
-      ]);
+        ],
+      ),
+    ],
+  );
 }
 
 // ── Leads list — individual floating cards
 class _LeadsList extends StatelessWidget {
   final List<Lead> leads;
-  const _LeadsList({required this.leads});
+  final VoidCallback onEnriched;
+  const _LeadsList({required this.leads, required this.onEnriched});
 
   @override
   Widget build(BuildContext context) {
@@ -497,18 +637,24 @@ class _LeadsList extends StatelessWidget {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(32),
-          child: Text('No leads yet.\nGo to Leads tab to add one.',
-              textAlign: TextAlign.center, style: TextStyle(color: _ink3, fontSize: 14)),
+          child: Text(
+            'No leads yet.\nGo to Leads tab to add one.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _ink3, fontSize: 14),
+          ),
         ),
       );
     }
     return Column(
-      children: leads
-          .map((l) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _LeadRow(lead: l),
-              ))
-          .toList(),
+      children:
+          leads
+              .map(
+                (l) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _LeadRow(lead: l, onEnriched: onEnriched),
+                ),
+              )
+              .toList(),
     );
   }
 }
@@ -516,7 +662,8 @@ class _LeadsList extends StatelessWidget {
 // ── Lead row — individual card with colored left bar + initials avatar
 class _LeadRow extends StatelessWidget {
   final Lead lead;
-  const _LeadRow({required this.lead});
+  final VoidCallback onEnriched;
+  const _LeadRow({required this.lead, required this.onEnriched});
 
   Future<void> _openWhatsApp(String phone) async {
     final cleaned = phone.replaceAll(RegExp(r'\D'), '');
@@ -532,14 +679,13 @@ class _LeadRow extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        backgroundColor: _surface,
-        content: Row(children: [
-          CircularProgressIndicator(),
-          SizedBox(width: 16),
-          Expanded(child: Text('Enriching lead…')),
-        ]),
-      ),
+      builder:
+          (_) => const AlertDialog(
+            backgroundColor: _surface,
+            content: Row(
+              children: [CircularProgressIndicator(), SizedBox(width: 16), Expanded(child: Text('Enriching lead…'))],
+            ),
+          ),
     );
     try {
       final res = await http.post(Uri.parse('${Config.serverUrl}/api/leads/${lead.id}/enrich'));
@@ -547,45 +693,54 @@ class _LeadRow extends StatelessWidget {
       Navigator.pop(context);
       if (res.statusCode == 200) {
         final filled = (jsonDecode(res.body)['filled'] as List?)?.cast<String>() ?? [];
+        onEnriched();
         showDialog(
           context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: _surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            title: const Text('✨ Enriched!', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
-            content: Text(
-              filled.isEmpty ? 'No new fields to fill.' : 'Filled: ${filled.join(', ')}',
-              style: const TextStyle(color: _ink2, fontSize: 13),
-            ),
-            actions: [TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('OK', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)),
-            )],
-          ),
+          builder:
+              (ctx) => AlertDialog(
+                backgroundColor: _surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                title: const Text('✨ Enriched!', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
+                content: Text(
+                  filled.isEmpty ? 'No new fields to fill.' : 'Filled: ${filled.join(', ')}',
+                  style: const TextStyle(color: _ink2, fontSize: 13),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text('OK', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)),
+                  ),
+                ],
+              ),
         );
       } else {
         final err = (jsonDecode(res.body)['error'] ?? 'unknown') as String;
         showDialog(
           context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: _surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            title: const Text('Enrich failed', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
-            content: Text(
-              err == 'no_photo' ? 'No photo on server. Sync this lead with a card photo first.' : 'Error: $err',
-              style: const TextStyle(color: _ink2, fontSize: 13),
-            ),
-            actions: [TextButton(onPressed: () => Navigator.pop(ctx),
-                child: Text('OK', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)))],
-          ),
+          builder:
+              (ctx) => AlertDialog(
+                backgroundColor: _surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                title: const Text('Enrich failed', style: TextStyle(fontWeight: FontWeight.w800, color: _ink)),
+                content: Text(
+                  err == 'no_photo' ? 'No photo on server. Sync this lead with a card photo first.' : 'Error: $err',
+                  style: const TextStyle(color: _ink2, fontSize: 13),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text('OK', style: TextStyle(color: _accent, fontWeight: FontWeight.w800)),
+                  ),
+                ],
+              ),
         );
       }
     } catch (_) {
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enrich failed. Check your connection.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Enrich failed. Check your connection.')));
       }
     }
   }
@@ -601,9 +756,7 @@ class _LeadRow extends StatelessWidget {
         color: _surface,
         border: Border.all(color: _border),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3)),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -633,13 +786,22 @@ class _LeadRow extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(children: [
-                              Expanded(
-                                child: Text(displayName,
-                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _ink, letterSpacing: -0.2)),
-                              ),
-                              if (l.tag != null) ...[const SizedBox(width: 6), _TagBadge(l.tag!)],
-                            ]),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    displayName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                      color: _ink,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                ),
+                                if (l.tag != null) ...[const SizedBox(width: 6), _TagBadge(l.tag!)],
+                              ],
+                            ),
                             if (l.company?.isNotEmpty == true) ...[
                               const SizedBox(height: 2),
                               Text(l.company!, style: const TextStyle(fontSize: 12, color: _ink2)),
@@ -652,44 +814,61 @@ class _LeadRow extends StatelessWidget {
                             ],
                             if (l.products?.isNotEmpty == true) ...[
                               const SizedBox(height: 4),
-                              Text(l.products!, style: const TextStyle(fontSize: 11, color: _ink2),
-                                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text(
+                                l.products!,
+                                style: const TextStyle(fontSize: 11, color: _ink2),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ],
                             const SizedBox(height: 12),
-                            Wrap(spacing: 6, runSpacing: 6, children: [
-                              _ActionBtn(
-  label: '',
-  bg: const Color(0xFFE6F6DA),
-  fg: const Color(0xFF3F7A1E),
-  icon: const FaIcon(FontAwesomeIcons.whatsapp, size: 14, color: Color(0xFF3F7A1E)),
-  onTap: () => _openWhatsApp(l.phone),
-),
-                              _ActionBtn(label: '📞', bg: const Color(0xFFF1ECE4), fg: const Color(0xFF5A5249), onTap: () => _call(l.phone)),
-                              _ActionBtn(
-  label: lead.enrichedAt != null ? '✨ Enriched' : '✨ Enrich',
-  bg: _accentTint,
-  fg: lead.enrichedAt != null ? _ink3 : _accentInk,
-  onTap: lead.enrichedAt == null ? () => _enrichLead(context) : null,
-),
-                              _ActionBtn(
-                                label: 'ⓘ Details',
-                                bg: const Color(0xFFF1ECE4),
-                                fg: const Color(0xFF5A5249),
-                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LeadDetailScreen(lead: l))),
-                              ),
-                            ]),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                _ActionBtn(
+                                  label: '',
+                                  bg: const Color(0xFFE6F6DA),
+                                  fg: const Color(0xFF3F7A1E),
+                                  icon: const FaIcon(FontAwesomeIcons.whatsapp, size: 14, color: Color(0xFF3F7A1E)),
+                                  onTap: l.phone.isEmpty ? null : () => _openWhatsApp(l.phone),
+                                ),
+                                _ActionBtn(
+                                  label: '📞',
+                                  bg: const Color(0xFFF1ECE4),
+                                  fg: const Color(0xFF5A5249),
+                                  onTap: l.phone.isEmpty ? null : () => _call(l.phone),
+                                ),
+                                _ActionBtn(
+                                  label: lead.enrichedAt != null ? '✨ Enriched' : '✨ Enrich',
+                                  bg: _accentTint,
+                                  fg: lead.enrichedAt != null ? _ink3 : _accentInk,
+                                  onTap: lead.enrichedAt == null ? () => _enrichLead(context) : null,
+                                ),
+                                _ActionBtn(
+                                  label: 'ⓘ Details',
+                                  bg: const Color(0xFFF1ECE4),
+                                  fg: const Color(0xFF5A5249),
+                                  onTap:
+                                      () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => LeadDetailScreen(lead: l)),
+                                      ),
+                                ),
+                              ],
+                            ),
                           ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 }
 
@@ -712,15 +891,19 @@ class _ActionBtn extends StatelessWidget {
           color: onTap == null ? bg.withValues(alpha: 0.5) : bg,
           borderRadius: BorderRadius.circular(9999),
         ),
-        child: icon != null
-            ? label.isEmpty
-                ? icon!
-                : Row(mainAxisSize: MainAxisSize.min, children: [
-                    icon!,
-                    const SizedBox(width: 5),
-                    Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: textColor)),
-                  ])
-            : Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: textColor)),
+        child:
+            icon != null
+                ? label.isEmpty
+                    ? icon!
+                    : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        icon!,
+                        const SizedBox(width: 5),
+                        Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: textColor)),
+                      ],
+                    )
+                : Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: textColor)),
       ),
     );
   }
@@ -734,10 +917,10 @@ class _TagBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = switch (tag) {
-      'hot'  => (const Color(0xFFFFE6E0), const Color(0xFFC2410C)),
+      'hot' => (const Color(0xFFFFE6E0), const Color(0xFFC2410C)),
       'warm' => (const Color(0xFFFFF3D9), const Color(0xFF9A6410)),
       'cold' => (const Color(0xFFE6F6DA), const Color(0xFF3F7A1E)),
-      _      => (const Color(0xFFF1ECE4), _ink2),
+      _ => (const Color(0xFFF1ECE4), _ink2),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
@@ -758,8 +941,10 @@ class _LocationPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(color: _accentTint, borderRadius: BorderRadius.circular(9999)),
-      child: Text(parts.join(', '),
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _accentInk)),
+      child: Text(
+        parts.join(', '),
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _accentInk),
+      ),
     );
   }
 }
