@@ -25,6 +25,14 @@ test("phone is never enriched even if OCR returns one", () => {
   assert.ok(!("phone" in updates));
 });
 
+test("audio_transcript fills only when blank (server-owned after that)", () => {
+  const { updates, filled } = mergeEnrichment({ audio_transcript: null }, { audio_transcript: "call back Monday" });
+  assert.strictEqual(updates.audio_transcript, "call back Monday");
+  assert.ok(filled.includes("audio_transcript"));
+  const second = mergeEnrichment({ audio_transcript: "existing" }, { audio_transcript: "new attempt" });
+  assert.ok(!("audio_transcript" in second.updates));
+});
+
 test("empty OCR result -> no updates", () => {
   assert.deepStrictEqual(mergeEnrichment({ name: "" }, {}).filled, []);
   assert.deepStrictEqual(mergeEnrichment({ name: "" }, null).filled, []);

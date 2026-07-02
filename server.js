@@ -34,17 +34,18 @@ app.post("/api/leads", async (req, res) => {
   const b = req.body || {};
   const wa = normalizeForWa(b.phone); // null if missing/invalid — no longer fatal
   const filledFields = LEAD_FIELDS.filter((k) => !isBlank(b[k]));
-  const hasPhoto = isPhoto(b.frontPhoto) || isPhoto(b.backPhoto);
+  const hasMedia = isPhoto(b.frontPhoto) || isPhoto(b.backPhoto) || isPhoto(b.audio);
   const phoneState = isBlank(b.phone) ? "none" : wa ? "valid" : "invalid";
-  console.log(`[POST /api/leads] fields=[${filledFields.join(",")}] photos=${[isPhoto(b.frontPhoto) && "front", isPhoto(b.backPhoto) && "back"].filter(Boolean).join("+") || "none"} phone=${phoneState}`);
-  if (!filledFields.length && !hasPhoto) {
-    console.log("[POST /api/leads] rejected: empty_lead (no fields, no photo)");
+  console.log(`[POST /api/leads] fields=[${filledFields.join(",")}] photos=${[isPhoto(b.frontPhoto) && "front", isPhoto(b.backPhoto) && "back"].filter(Boolean).join("+") || "none"} audio=${isPhoto(b.audio) ? "yes" : "no"} phone=${phoneState}`);
+  if (!filledFields.length && !hasMedia) {
+    console.log("[POST /api/leads] rejected: empty_lead (no fields, no photo, no audio)");
     return res.status(400).json({ error: "empty_lead" });
   }
   const id = typeof b.id === "string" && b.id ? b.id : crypto.randomUUID();
   try {
     const frontUrl = await db.uploadPhoto(b.frontPhoto, `${id}-front.jpg`);
     const backUrl = await db.uploadPhoto(b.backPhoto, `${id}-back.jpg`);
+    const audioUrl = await db.uploadPhoto(b.audio, `${id}-audio.m4a`); // uploads any data URL, mime from header
     await db.upsertLead(
       {
         id, phone: isBlank(b.phone) ? null : String(b.phone).trim(), wa_phone: wa,
@@ -52,7 +53,7 @@ app.post("/api/leads", async (req, res) => {
         city: b.city, state: b.state, products: b.products, note: b.note, tag: b.tag,
         created_at: b.created_at || new Date().toISOString(),
       },
-      { frontUrl, backUrl }
+      { frontUrl, backUrl, audioUrl }
     );
     console.log(`[POST /api/leads] saved id=${id} wa_phone=${wa || "null"}`);
     res.json({ id, wa_phone: wa });
@@ -67,12 +68,14 @@ app.get("/api/leads", async (_req, res) => {
   catch (e) { console.error("[GET /api/leads]", e.message); res.status(502).json({ error: "read_failed" }); }
 });
 
-// OCR core (ADR 0002): fill a lead's BLANK fields from its card photo(s), stamp
-// enriched_at. Photos are fetched from their Storage URLs. Throws Error with
-// .code ("no_photo" | "ocr_failed").
+// Enrich core (ADR 0002): one Gemini call reads the card photo(s) AND the voice
+// note, returns one JSON; blank fields get filled, transcript lands in
+// audio_transcript, enriched_at is stamped. Media is fetched from Storage URLs.
+// Throws Error with .code ("no_photo" = nothing to read | "ocr_failed").
 async function enrichLead(lead) {
   const key = process.env.GOOGLE_API_KEY;
-  const images = [];
+  const parts = [];
+  let imageCount = 0;
   for (const url of [lead.front_url, lead.back_url]) {
     if (!url) continue;
     try {
@@ -80,19 +83,36 @@ async function enrichLead(lead) {
       if (!r.ok) continue;
       const buf = Buffer.from(await r.arrayBuffer());
       const mime = buf[0] === 0x89 && buf[1] === 0x50 ? "image/png" : "image/jpeg";
-      images.push({ data: buf.toString("base64"), mime });
+      parts.push({ inline_data: { mime_type: mime, data: buf.toString("base64") } });
+      imageCount++;
     } catch { /* unreachable photo: skip */ }
   }
-  if (!images.length) { const e = new Error("no_photo"); e.code = "no_photo"; throw e; }
+  // Voice note: only worth sending while the transcript is still blank.
+  let hasAudio = false;
+  if (lead.audio_url && !lead.audio_transcript) {
+    try {
+      const r = await fetch(lead.audio_url);
+      if (r.ok) {
+        const buf = Buffer.from(await r.arrayBuffer());
+        parts.push({ inline_data: { mime_type: "audio/aac", data: buf.toString("base64") } });
+        hasAudio = true;
+      }
+    } catch { /* unreachable audio: skip */ }
+  }
+  if (!parts.length) { const e = new Error("no_photo"); e.code = "no_photo"; throw e; }
 
   const prompt =
-    "This is a business/visiting card or an ID card. Extract these fields as JSON: " +
-    '{"name":..., "company":..., "email":..., "website":..., "city":..., "state":..., "products":...}. ' +
-    '"name" is the PERSON\'S full name printed on the card (often the most prominent line, not the company). ' +
-    "Always return the name if any human name is legible. " +
+    "Extract information as a single JSON object: " +
+    '{"name":..., "company":..., "email":..., "website":..., "city":..., "state":..., "products":..., "audio_transcript":...}. ' +
+    (imageCount
+      ? 'The image(s) show a business/visiting card or an ID card. "name" is the PERSON\'S full name printed on the card ' +
+        "(often the most prominent line, not the company). Always return the name if any human name is legible. "
+      : "") +
+    (hasAudio
+      ? 'The audio is a voice note recorded by a salesperson about this lead (may be Indian English or Hinglish). Put its full transcription in "audio_transcript". '
+      : '"audio_transcript" must be null. ') +
     "Use null only for a field that is truly absent or unreadable. Do not invent data.";
   const model = process.env.OCR_MODEL || "gemini-2.5-flash";
-  const parts = images.map((im) => ({ inline_data: { mime_type: im.mime, data: im.data } }));
   parts.push({ text: prompt });
 
   const r = await fetch(
@@ -102,7 +122,7 @@ async function enrichLead(lead) {
       headers: { "x-goog-api-key": key, "content-type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts }],
-        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 800, thinkingConfig: { thinkingBudget: 0 } },
+        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
       }),
     }
   );
@@ -116,7 +136,7 @@ async function enrichLead(lead) {
   const text = c && c.content && c.content.parts && c.content.parts[0] && c.content.parts[0].text;
   const ocr = parseOcrJson(text);
   console.log(`[enrich ${lead.id}] OCR raw: ${JSON.stringify(ocr)}`);
-  console.log(`[enrich ${lead.id}] lead blanks: ${["name","company","email","website","city","state","products"].filter((f) => !lead[f]).join(",") || "(none)"}`);
+  console.log(`[enrich ${lead.id}] lead blanks: ${["name","company","email","website","city","state","products","audio_transcript"].filter((f) => !lead[f]).join(",") || "(none)"}`);
   const { updates, filled } = mergeEnrichment(lead, ocr);
   await db.updateFields(lead.id, { ...updates, enriched_at: new Date().toISOString() });
   console.log(`[enrich ${lead.id}] filled: ${filled.join(", ") || "(none)"}`);

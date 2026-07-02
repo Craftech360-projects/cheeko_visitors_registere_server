@@ -15,3 +15,4 @@ Task 3: complete (commits ce12470..2e8cabd, review clean after enriched_at test 
 Task 4: complete (commit 49e0767, 26/26 tests + node --check; review PASS; Minors: photo-fetch OOM swallow, enrichLead key guard, empty-template edge — all graceful, defer)
 Task 5: complete (commit 1a2950c, grep clean, ids quoted consistently)
 Task 6: complete (commit 1cf7c0b, docs cleanup)
+Final cleanup: complete (commit 34a187e, review READY TO MERGE, 3 minors fixed)

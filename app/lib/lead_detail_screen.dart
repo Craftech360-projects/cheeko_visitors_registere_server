@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:open_file/open_file.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'lead.dart';
 
 // ── Design tokens (mirrors style.css)
@@ -51,8 +53,36 @@ class LeadDetailScreen extends StatelessWidget {
               _Row2('City', l.city, 'State / Region', l.state),
               _Row1('Products / Interest', l.products),
               _Row1('Note', l.note),
+              _Row1('Voice transcript', l.audioTranscript),
               _Row1('Captured', _formatDate(l.createdAt)),
             ]),
+            if (l.audioPath != null || l.audioUrl != null) ...[
+              const SizedBox(height: 20),
+              _sectionLabel('Voice note'),
+              const SizedBox(height: 8),
+              _Card(children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Row(children: [
+                    const Text('🎙', style: TextStyle(fontSize: 18)),
+                    const SizedBox(width: 10),
+                    const Expanded(child: Text('Recorded note', style: TextStyle(fontSize: 13, color: _ink))),
+                    IconButton(
+                      icon: const Icon(Icons.play_circle_outline, color: _ink2),
+                      tooltip: 'Play',
+                      onPressed: () {
+                        // Local file when it exists on this device; else stream the server copy.
+                        if (l.audioPath != null && File(l.audioPath!).existsSync()) {
+                          OpenFile.open(l.audioPath!);
+                        } else if (l.audioUrl != null) {
+                          launchUrl(Uri.parse(l.audioUrl!), mode: LaunchMode.externalApplication);
+                        }
+                      },
+                    ),
+                  ]),
+                ),
+              ]),
+            ],
             if (l.frontPath != null || l.backPath != null) ...[
               const SizedBox(height: 20),
               _sectionLabel('Photos'),

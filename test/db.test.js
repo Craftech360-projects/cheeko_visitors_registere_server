@@ -32,3 +32,20 @@ test("dataUrlToBuffer decodes base64 and detects mime", () => {
   assert.strictEqual(dataUrlToBuffer("not-a-data-url"), null);
   assert.strictEqual(dataUrlToBuffer(null), null);
 });
+
+test("dataUrlToBuffer trusts the declared mime for audio", () => {
+  const m4a = "data:audio/mp4;base64," + Buffer.from("ftypM4A fake").toString("base64");
+  const out = dataUrlToBuffer(m4a);
+  assert.strictEqual(out.mime, "audio/mp4");
+  // a jpeg-labelled image still falls back to magic-byte detection
+  const jpg = "data:image/jpeg;base64," + Buffer.from([0xff, 0xd8, 0xff]).toString("base64");
+  assert.strictEqual(dataUrlToBuffer(jpg).mime, "image/jpeg");
+});
+
+test("buildUpsertRow carries audio_url, drops it when absent", () => {
+  const base = { id: "u1", phone: "9744187790", created_at: "2026-07-02" };
+  const withAudio = buildUpsertRow(base, { audioUrl: "http://x/u1-audio.m4a" });
+  assert.strictEqual(withAudio.audio_url, "http://x/u1-audio.m4a");
+  const without = buildUpsertRow(base, {});
+  assert.ok(!("audio_url" in without)); // null dropped → re-sync never wipes it
+});

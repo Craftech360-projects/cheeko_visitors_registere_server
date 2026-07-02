@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'audio.dart';
 import 'config.dart';
 import 'db.dart';
 import 'lead.dart';
@@ -17,6 +18,7 @@ Future<Map<String, Object?>> leadToPayload(Lead l) async => {
       'created_at': l.createdAt,
       if (l.frontPath != null) 'frontPhoto': await fileToDataUrl(l.frontPath!),
       if (l.backPath != null) 'backPhoto': await fileToDataUrl(l.backPath!),
+      if (l.audioPath != null) 'audio': await audioToDataUrl(l.audioPath!),
     };
 
 // Upload every unsynced lead, one request each. Resumable: a failure leaves

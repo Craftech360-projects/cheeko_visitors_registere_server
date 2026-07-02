@@ -22,9 +22,15 @@ create table if not exists public.leads (
   tag         text,
   front_url   text,                     -- public URL of the front card photo
   back_url    text,                     -- public URL of the back card photo
+  audio_url   text,                     -- public URL of the voice note (m4a)
+  audio_transcript text,                -- filled by enrich (Gemini transcription)
   enriched_at timestamptz,              -- set when OCR ran (null = pending)
   created_at  timestamptz
 );
+
+-- Upgrading an existing install? Run just these:
+-- alter table public.leads add column if not exists audio_url text;
+-- alter table public.leads add column if not exists audio_transcript text;
 
 create index if not exists leads_created_at_idx on public.leads (created_at desc);
 

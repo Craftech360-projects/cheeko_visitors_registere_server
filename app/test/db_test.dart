@@ -4,7 +4,11 @@ import 'package:visitors_capture/db.dart';
 import 'package:visitors_capture/lead.dart';
 
 void main() {
-  setUpAll(() { sqfliteFfiInit(); databaseFactory = databaseFactoryFfi; });
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    LeadDb.dbName = 'test_db_suite.db'; // own file — suites run in parallel
+  });
 
   test('insert then unsynced returns it; markSynced clears it', () async {
     final db = LeadDb.instance;
@@ -32,6 +36,14 @@ void main() {
     final pending = await db.unsynced();
     expect(pending.length, 1);
     expect(pending.first.name, 'A edited');
+  });
+
+  test('audio_path round-trips through the local DB', () async {
+    final db = LeadDb.instance;
+    await db.resetForTest();
+    await db.insert(Lead.create(phone: '9733333333', audioPath: '/x/abc-audio.m4a'));
+    final got = (await db.unsynced()).first;
+    expect(got.audioPath, '/x/abc-audio.m4a');
   });
 
   test('phoneExists detects a locally-captured number', () async {

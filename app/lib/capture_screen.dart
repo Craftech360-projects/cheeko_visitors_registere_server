@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:open_file/open_file.dart';
 import 'package:uuid/uuid.dart';
+import 'audio.dart';
 import 'db.dart';
 import 'lead.dart';
 import 'photos.dart';
@@ -18,6 +21,9 @@ class _CaptureScreenState extends State<CaptureScreen> {
   static const _fields = ['phone', 'name', 'company', 'email', 'website', 'city', 'state', 'products', 'note'];
   late final String _id;
   String? _frontPath, _backPath;
+  String? _audioPath;
+  final _recorder = LeadRecorder();
+  bool _recording = false;
   String? _tag;
   bool _saving = false;
   String? _phoneError;
@@ -63,13 +69,40 @@ class _CaptureScreenState extends State<CaptureScreen> {
       _c['note']!.text = l.note ?? '';
       _frontPath = l.frontPath;
       _backPath = l.backPath;
+      _audioPath = l.audioPath;
       _tag = l.tag;
     }
     for (final c in _c.values) { c.addListener(() => setState(() {})); }
   }
 
   @override
-  void dispose() { for (final c in _c.values) { c.dispose(); } super.dispose(); }
+  void dispose() {
+    for (final c in _c.values) { c.dispose(); }
+    _recorder.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggleRecord() async {
+    if (_recording) {
+      final path = await _recorder.stop();
+      setState(() { _recording = false; _audioPath = path ?? _audioPath; });
+    } else {
+      final ok = await _recorder.start(_id); // re-record overwrites <id>-audio.m4a
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Microphone permission denied')));
+        return;
+      }
+      setState(() => _recording = true);
+    }
+  }
+
+  Future<void> _deleteAudio() async {
+    if (_recording) await _recorder.stop();
+    final path = _audioPath;
+    setState(() { _recording = false; _audioPath = null; });
+    if (path != null) { try { await File(path).delete(); } catch (_) {} }
+  }
 
   Future<void> _shoot(String side) async {
     final path = await capturePhoto(_id, side);
@@ -99,6 +132,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
       id: _id, phone: phone, name: _t('name'), company: _t('company'), email: _t('email'),
       website: _t('website'), city: _t('city'), state: _t('state'), products: _t('products'),
       note: _t('note'), tag: _tag, frontPath: _frontPath, backPath: _backPath,
+      audioPath: _audioPath,
       createdAt: widget.lead?.createdAt ?? DateTime.now().toUtc().toIso8601String(),
     );
     if (isNew) {
@@ -114,7 +148,8 @@ class _CaptureScreenState extends State<CaptureScreen> {
   bool get _hasAnyInput =>
       _fields.any((k) => _c[k]!.text.trim().isNotEmpty) ||
       _frontPath != null ||
-      _backPath != null;
+      _backPath != null ||
+      _audioPath != null;
 
   bool get _phoneValid {
     final phone = _c['phone']!.text.trim();
@@ -172,6 +207,27 @@ class _CaptureScreenState extends State<CaptureScreen> {
                 Expanded(child: OutlinedButton.icon(onPressed: () => _shoot('front'), icon: const Icon(Icons.camera_alt), label: Text(_frontPath == null ? 'Front photo' : 'Front ✓'))),
                 const SizedBox(width: 8),
                 Expanded(child: OutlinedButton.icon(onPressed: () => _shoot('back'), icon: const Icon(Icons.camera_alt), label: Text(_backPath == null ? 'Back photo' : 'Back ✓'))),
+              ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _toggleRecord,
+                    icon: Icon(_recording ? Icons.stop_circle : Icons.mic,
+                        color: _recording ? Colors.red : null),
+                    label: Text(_recording
+                        ? 'Recording… tap to stop'
+                        : _audioPath == null ? 'Voice note' : 'Voice note ✓ (re-record)'),
+                    style: _recording
+                        ? OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red))
+                        : null,
+                  ),
+                ),
+                if (_audioPath != null && !_recording) ...[
+                  const SizedBox(width: 8),
+                  IconButton(onPressed: () => OpenFile.open(_audioPath!), icon: const Icon(Icons.play_circle_outline), tooltip: 'Play'),
+                  IconButton(onPressed: _deleteAudio, icon: const Icon(Icons.delete_outline, color: Colors.red), tooltip: 'Delete'),
+                ],
               ]),
               const SizedBox(height: 16),
               const Text('Priority', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF4b5563))),

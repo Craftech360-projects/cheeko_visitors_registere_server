@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Sync uploads leads over HTTP to the droplet. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Voice notes per lead. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="LeadSnap"
         android:name="${applicationName}"

@@ -5,6 +5,9 @@ import 'lead.dart';
 class LeadDb {
   LeadDb._();
   static final LeadDb instance = LeadDb._();
+
+  /// Test seam: parallel test suites must not share one on-disk file.
+  static String dbName = 'leads.db';
   Database? _db;
 
   Future<Database> get _database async => _db ??= await _open();
@@ -12,15 +15,19 @@ class LeadDb {
   Future<Database> _open() async {
     final dir = await getDatabasesPath();
     return openDatabase(
-      p.join(dir, 'leads.db'),
-      version: 1,
+      p.join(dir, dbName),
+      version: 2,
       onCreate: (db, _) => db.execute('''
         CREATE TABLE leads (
           id TEXT PRIMARY KEY, phone TEXT NOT NULL, name TEXT, company TEXT,
           email TEXT, website TEXT, city TEXT, state TEXT, products TEXT, note TEXT,
-          tag TEXT, front_path TEXT, back_path TEXT, created_at TEXT NOT NULL,
+          tag TEXT, front_path TEXT, back_path TEXT, audio_path TEXT,
+          created_at TEXT NOT NULL,
           synced INTEGER NOT NULL DEFAULT 0
         )'''),
+      onUpgrade: (db, oldV, _) async {
+        if (oldV < 2) await db.execute('ALTER TABLE leads ADD COLUMN audio_path TEXT');
+      },
     );
   }
 
