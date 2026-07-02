@@ -21,25 +21,40 @@ app.use(express.static(path.join(ROOT, "public")));
 app.get("/", (_req, res) => res.sendFile(path.join(ROOT, "public", "capture.html")));
 app.get("/dashboard", (_req, res) => res.sendFile(path.join(ROOT, "public", "dashboard.html")));
 
-// Create/replace a lead. Phone is the only required field. Idempotent: re-sending
-// the same id upserts (never duplicates). Photos -> Storage, urls onto the row.
+// Create/replace a lead. All fields are optional: a lead is accepted as long as
+// it carries at least one non-blank field OR at least one photo — only a totally
+// empty submission is rejected. Phone, when present and valid, is normalized into
+// wa_phone; an absent/invalid phone just leaves wa_phone null (still saveable).
+// Idempotent: re-sending the same id upserts (never duplicates).
+const LEAD_FIELDS = ["phone", "name", "company", "email", "website", "city", "state", "products", "note", "tag"];
+const isBlank = (v) => v == null || String(v).trim() === "";
+const isPhoto = (v) => typeof v === "string" && v.startsWith("data:");
+
 app.post("/api/leads", async (req, res) => {
   const b = req.body || {};
-  const wa = normalizeForWa(b.phone);
-  if (!wa) return res.status(400).json({ error: "invalid_phone" });
+  const wa = normalizeForWa(b.phone); // null if missing/invalid — no longer fatal
+  const filledFields = LEAD_FIELDS.filter((k) => !isBlank(b[k]));
+  const hasPhoto = isPhoto(b.frontPhoto) || isPhoto(b.backPhoto);
+  const phoneState = isBlank(b.phone) ? "none" : wa ? "valid" : "invalid";
+  console.log(`[POST /api/leads] fields=[${filledFields.join(",")}] photos=${[isPhoto(b.frontPhoto) && "front", isPhoto(b.backPhoto) && "back"].filter(Boolean).join("+") || "none"} phone=${phoneState}`);
+  if (!filledFields.length && !hasPhoto) {
+    console.log("[POST /api/leads] rejected: empty_lead (no fields, no photo)");
+    return res.status(400).json({ error: "empty_lead" });
+  }
   const id = typeof b.id === "string" && b.id ? b.id : crypto.randomUUID();
   try {
     const frontUrl = await db.uploadPhoto(b.frontPhoto, `${id}-front.jpg`);
     const backUrl = await db.uploadPhoto(b.backPhoto, `${id}-back.jpg`);
     await db.upsertLead(
       {
-        id, phone: String(b.phone).trim(), wa_phone: wa,
+        id, phone: isBlank(b.phone) ? null : String(b.phone).trim(), wa_phone: wa,
         name: b.name, company: b.company, email: b.email, website: b.website,
         city: b.city, state: b.state, products: b.products, note: b.note, tag: b.tag,
         created_at: b.created_at || new Date().toISOString(),
       },
       { frontUrl, backUrl }
     );
+    console.log(`[POST /api/leads] saved id=${id} wa_phone=${wa || "null"}`);
     res.json({ id, wa_phone: wa });
   } catch (e) {
     console.error("[POST /api/leads]", e.message);
@@ -71,9 +86,11 @@ async function enrichLead(lead) {
   if (!images.length) { const e = new Error("no_photo"); e.code = "no_photo"; throw e; }
 
   const prompt =
-    "This is a business/visiting card. Extract these fields as JSON: " +
+    "This is a business/visiting card or an ID card. Extract these fields as JSON: " +
     '{"name":..., "company":..., "email":..., "website":..., "city":..., "state":..., "products":...}. ' +
-    "Use null for any field that is not clearly legible. Do not guess.";
+    '"name" is the PERSON\'S full name printed on the card (often the most prominent line, not the company). ' +
+    "Always return the name if any human name is legible. " +
+    "Use null only for a field that is truly absent or unreadable. Do not invent data.";
   const model = process.env.OCR_MODEL || "gemini-2.5-flash";
   const parts = images.map((im) => ({ inline_data: { mime_type: im.mime, data: im.data } }));
   parts.push({ text: prompt });
@@ -97,7 +114,10 @@ async function enrichLead(lead) {
   const data = await r.json();
   const c = data.candidates && data.candidates[0];
   const text = c && c.content && c.content.parts && c.content.parts[0] && c.content.parts[0].text;
-  const { updates, filled } = mergeEnrichment(lead, parseOcrJson(text));
+  const ocr = parseOcrJson(text);
+  console.log(`[enrich ${lead.id}] OCR raw: ${JSON.stringify(ocr)}`);
+  console.log(`[enrich ${lead.id}] lead blanks: ${["name","company","email","website","city","state","products"].filter((f) => !lead[f]).join(",") || "(none)"}`);
+  const { updates, filled } = mergeEnrichment(lead, ocr);
   await db.updateFields(lead.id, { ...updates, enriched_at: new Date().toISOString() });
   console.log(`[enrich ${lead.id}] filled: ${filled.join(", ") || "(none)"}`);
   return { filled };
@@ -109,7 +129,8 @@ app.post("/api/leads/:id/enrich", async (req, res) => {
     const lead = await db.getLead(req.params.id);
     if (!lead) return res.status(404).json({ error: "not_found" });
     const { filled } = await enrichLead(lead);
-    res.json({ filled });
+    const updated = await db.getLead(req.params.id); // return the fresh row so the client shows filled values without a refetch
+    res.json({ filled, lead: updated });
   } catch (e) {
     if (e.code === "no_photo") return res.status(400).json({ error: "no_photo" });
     if (e.code === "ocr_failed") return res.status(502).json({ error: "ocr_failed", status: e.status });
